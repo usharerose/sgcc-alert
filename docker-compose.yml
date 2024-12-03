@@ -1,0 +1,13 @@
+services:
+
+  sgcc-alert-build:
+    build:
+      context: .
+      target: dev
+    image: sgcc-alert:${IMAGE_TAG:-latest}
+
+  sgcc-alert-run:
+    image: sgcc-alert:${IMAGE_TAG:-latest}
+    volumes:
+      - ./:/app/sgcc-alert/
+    command: ["tail", "-f", "/dev/null"]

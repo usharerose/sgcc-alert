@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "sgcc-alert"
+version = "0.0.1"
+description = "Alert for personal SGCC usage"
+authors = ["usharerose <ushareroses@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
+playwright = "1.49.0"
+
+[tool.poetry.group.dev.dependencies]
+ipython = "8.26.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
