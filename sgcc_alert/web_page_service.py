@@ -4,7 +4,7 @@ Service for SGCC web page manipulation
 import logging
 import random
 import time
-from typing import Tuple
+from typing import List, Tuple
 
 from playwright.sync_api import Page
 
@@ -45,7 +45,7 @@ ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 
 
 DRAG_SLIDE_SPEED_UP_RATIO = 0.8
-DRAG_SLIDE_SPEED_UP_ACCELERATION = 10
+DRAG_SLIDE_SPEED_UP_ACCELERATION = 10.0
 DRAG_SLIDE_TIME_STEP = 0.1
 SLIDE_X_OFFSET_FACTOR = 1.05
 
@@ -100,7 +100,7 @@ class WebPageService:
         self._verify_slide_captcha_with_retry(page)
         page.wait_for_timeout(10)
 
-    def _verify_slide_captcha_with_retry(self, page: Page):
+    def _verify_slide_captcha_with_retry(self, page: Page) -> None:
         retries = 0
         while True:
             try:
@@ -167,36 +167,36 @@ class WebPageService:
         assume the page is with captcha,
         verify by slide action with the distance according to given offset
         """
-        slide_button = page.locator(f'xpath={XPATH_CAPTCHA_SLIDE_BUTTON}')
-        slide_button_box = slide_button.bounding_box()
-        box_x = slide_button_box['x'] + slide_button_box['width'] / 2
-        box_y = slide_button_box['y'] + slide_button_box['height'] / 2
+        slide_button_box_x, slide_button_box_y = self._get_element_center_ordinates(
+            page,
+            XPATH_CAPTCHA_SLIDE_BUTTON
+        )
 
-        page.mouse.move(box_x, box_y)
+        page.mouse.move(slide_button_box_x, slide_button_box_y)
         page.mouse.down()
         for sub_x_offset in self.simulate_horizontal_move_tracks(x_offset):
-            sub_dest_x = box_x + sub_x_offset
+            sub_dest_x = slide_button_box_x + sub_x_offset
 
             # simulate the shake when slide
             sub_y_offset = random.uniform(-2, 2)
-            sub_dest_y = box_y + sub_y_offset
+            sub_dest_y = slide_button_box_y + sub_y_offset
 
             page.mouse.move(sub_dest_x, sub_dest_y)
         page.mouse.up()
 
     @staticmethod
-    def simulate_horizontal_move_tracks(x_offset: float):
+    def simulate_horizontal_move_tracks(x_offset: float) -> List[float]:
         """
         build tracing point with speed up and speed down
         to imitate human-machine interaction
         """
         tracks = []
-        cur_offset = 0
+        cur_offset = 0.0
         # move getting slow down near the end of the distance
         mid = x_offset * DRAG_SLIDE_SPEED_UP_RATIO
-        velocity = 0
+        velocity = 0.0
         while cur_offset < x_offset:
-            acceleration = DRAG_SLIDE_SPEED_UP_ACCELERATION  # speed up
+            acceleration: float = DRAG_SLIDE_SPEED_UP_ACCELERATION  # speed up
             if cur_offset >= mid:
                 acceleration = (
                     -1 * DRAG_SLIDE_SPEED_UP_ACCELERATION * DRAG_SLIDE_SPEED_UP_RATIO /
@@ -209,13 +209,20 @@ class WebPageService:
         return tracks
 
     @staticmethod
-    def _refresh_captcha(page: Page):
-        refresh_button = page.locator(f'xpath={XPATH_CAPTCHA_REFRESH_BUTTON}')
-        refresh_button_box = refresh_button.bounding_box()
-        box_x = refresh_button_box['x'] + refresh_button_box['width'] / 2
-        box_y = refresh_button_box['y'] + refresh_button_box['height'] / 2
+    def _get_element_center_ordinates(page: Page, x_path: str) -> Tuple[float, float]:
+        element = page.locator(f'xpath={x_path}')
+        element_box = element.bounding_box()
+        assert element_box is not None
+        x_ordinate = element_box['x'] + element_box['width'] / 2
+        y_ordinate = element_box['y'] + element_box['height'] / 2
+        return x_ordinate, y_ordinate
 
-        page.mouse.click(box_x, box_y)
+    def _refresh_captcha(self, page: Page) -> None:
+        x_ordinate, y_ordinate = self._get_element_center_ordinates(
+            page,
+            XPATH_CAPTCHA_REFRESH_BUTTON
+        )
+        page.mouse.click(x_ordinate, y_ordinate)
 
     def _recognize_notch_ordinate(self, page: Page) -> Tuple[int, int]:
         bg_data_url, slide_data_url = self._identify_slide_captcha(page)

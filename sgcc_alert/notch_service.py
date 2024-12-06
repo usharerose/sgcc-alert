@@ -74,8 +74,7 @@ class NotchService:
         and colorful block
         return the width and height of it
         """
-        im = Image.open(io.BytesIO(self._slide_bytes))
-        im = im.convert('RGBA')
+        im = Image.open(io.BytesIO(self._slide_bytes)).convert('RGBA')
         min_x, min_y, max_x, max_y = im.width, im.height, 0, 0
 
         data = im.getdata()
