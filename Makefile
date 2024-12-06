@@ -10,6 +10,12 @@ run: build clean-container
 ssh:
 	docker-compose exec sgcc-alert-run /bin/bash
 
+lint:
+	python -m flake8 sgcc_alert/
+
+type-hint:
+	python -m mypy sgcc_alert/
+
 test:
 	python -m pytest -sv --disable-warnings -p no:cacheprovider tests/*
 
