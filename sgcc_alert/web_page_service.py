@@ -38,6 +38,11 @@ ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 
 
+DRAG_SLIDE_SPEED_UP_RATIO = 0.8
+DRAG_SLIDE_SPEED_UP_ACCELERATION = 10
+DRAG_SLIDE_TIME_STEP = 0.1
+
+
 class LoginError(Exception):
 
     pass
@@ -118,18 +123,44 @@ class WebPageService:
         slide_img_data_url = page.evaluate(slide_img_script)
         return bg_img_data_url, slide_img_data_url
 
-    @staticmethod
-    def _slide_block(page: Page, x_offset: int) -> None:
+    def _slide_block(self, page: Page, x_offset: float) -> None:
         slide_button = page.locator(f'xpath={XPATH_CAPTCHA_SLIDE_BUTTON}')
         slide_button_box = slide_button.bounding_box()
         box_x = slide_button_box['x'] + slide_button_box['width'] / 2
         box_y = slide_button_box['y'] + slide_button_box['height'] / 2
-        dest_x = box_x + x_offset
-        # simulate the shake when slide
-        y_offset = random.uniform(-2, 2)
-        dest_y = box_y + y_offset
 
         page.mouse.move(box_x, box_y)
         page.mouse.down()
-        page.mouse.move(dest_x, dest_y, steps=30)
+        for sub_x_offset in self.simulate_horizontal_move_tracks(x_offset):
+            sub_dest_x = box_x + sub_x_offset
+
+            # simulate the shake when slide
+            sub_y_offset = random.uniform(-2, 2)
+            sub_dest_y = box_y + sub_y_offset
+
+            page.mouse.move(sub_dest_x, sub_dest_y)
         page.mouse.up()
+
+    @staticmethod
+    def simulate_horizontal_move_tracks(x_offset: float):
+        """
+        build tracing point with speed up and speed down
+        to imitate human-machine interaction
+        """
+        tracks = []
+        cur_offset = 0
+        # move getting slow down near the end of the distance
+        mid = x_offset * DRAG_SLIDE_SPEED_UP_RATIO
+        velocity = 0
+        while cur_offset < x_offset:
+            acceleration = DRAG_SLIDE_SPEED_UP_ACCELERATION  # speed up
+            if cur_offset >= mid:
+                acceleration = (
+                    -1 * DRAG_SLIDE_SPEED_UP_ACCELERATION * DRAG_SLIDE_SPEED_UP_RATIO /
+                    (1 - DRAG_SLIDE_SPEED_UP_RATIO)
+                )  # speed down at the second half
+            span = velocity * DRAG_SLIDE_TIME_STEP + 0.5 * acceleration * DRAG_SLIDE_TIME_STEP ** 2
+            velocity = velocity + acceleration * DRAG_SLIDE_TIME_STEP
+            cur_offset += span
+            tracks.append(round(cur_offset, 4))
+        return tracks
