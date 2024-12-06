@@ -34,8 +34,8 @@ class NotchService:
         return self._bg_bytes
 
     @property
-    def bg_data_url(self) -> str:
-        return self.slide_data_url
+    def slide_data_url(self) -> str:
+        return self._slide_data_url
 
     @property
     def slide_bytes(self) -> bytes:

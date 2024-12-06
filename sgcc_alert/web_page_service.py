@@ -3,11 +3,12 @@ Service for SGCC web page manipulation
 """
 import logging
 import random
+import time
 from typing import Tuple
 
-from playwright.sync_api import Browser, Page
+from playwright.sync_api import Page
 
-from sgcc_alert.notch_service import NotchService
+from .notch_service import NotchService
 
 
 logger = logging.getLogger(__name__)
@@ -104,13 +105,13 @@ class WebPageService:
         while True:
             try:
                 self._verify_slide_captcha(page)
-            except CaptchaValidationError as e:
+            except CaptchaValidationError:
                 if retries < REFRESH_CAPTCHA_RETRY_LIMIT:
                     time.sleep(1)
                     retries += 1
                 else:
                     break
-            except (LoginRateLimitError, LoginAccountPasswordError, LoginError) as e:
+            except (LoginRateLimitError, LoginAccountPasswordError, LoginError):
                 raise
             else:
                 break
@@ -146,7 +147,7 @@ class WebPageService:
                 raise LoginAccountPasswordError(ERR_MSG_WRONG_ACCOUNT_PWD)
             raise LoginError(f'Login failed: {LoginError}')
         if page.url == WEB_URL_LOGIN:
-            raise LoginError(f'Login failed with unknown error')
+            raise LoginError('Login failed with unknown error')
 
     @staticmethod
     def _identify_slide_captcha(page: Page) -> Tuple[str, str]:
@@ -214,7 +215,7 @@ class WebPageService:
         box_x = refresh_button_box['x'] + refresh_button_box['width'] / 2
         box_y = refresh_button_box['y'] + refresh_button_box['height'] / 2
 
-        page.mouse.click(box_x,box_y)
+        page.mouse.click(box_x, box_y)
 
     def _recognize_notch_ordinate(self, page: Page) -> Tuple[int, int]:
         bg_data_url, slide_data_url = self._identify_slide_captcha(page)
