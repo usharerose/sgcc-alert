@@ -98,7 +98,6 @@ class WebPageService:
         page.wait_for_timeout(TIMEOUT)
 
         self._verify_slide_captcha_with_retry(page)
-        page.wait_for_timeout(10)
 
     def _verify_slide_captcha_with_retry(self, page: Page) -> None:
         retries = 0
@@ -123,7 +122,6 @@ class WebPageService:
         retries = 0
         while x_ordinate == 0 and retries < REFRESH_CAPTCHA_RETRY_LIMIT:
             self._refresh_captcha(page)
-            page.wait_for_timeout(TIMEOUT)
             x_ordinate, _ = self._recognize_notch_ordinate(page)
             retries += 1
 
@@ -134,7 +132,6 @@ class WebPageService:
         # the factor on x_offset is from experience
         # which makes the slide block being in place
         self._slide_block(page, x_ordinate * SLIDE_X_OFFSET_FACTOR)
-        page.wait_for_timeout(TIMEOUT)
 
         err_tip_div = page.locator(f'.{CLASS_LOGIN_ERR_TIPS}')
         if err_tip_div.is_visible():
@@ -183,6 +180,7 @@ class WebPageService:
 
             page.mouse.move(sub_dest_x, sub_dest_y)
         page.mouse.up()
+        page.wait_for_timeout(TIMEOUT)
 
     @staticmethod
     def simulate_horizontal_move_tracks(x_offset: float) -> List[float]:
@@ -223,6 +221,7 @@ class WebPageService:
             XPATH_CAPTCHA_REFRESH_BUTTON
         )
         page.mouse.click(x_ordinate, y_ordinate)
+        page.wait_for_timeout(TIMEOUT)
 
     def _recognize_notch_ordinate(self, page: Page) -> Tuple[int, int]:
         bg_data_url, slide_data_url = self._identify_slide_captcha(page)
