@@ -1,6 +1,7 @@
 """
 Service for SGCC web page manipulation
 """
+import logging
 import random
 from typing import Tuple
 
@@ -9,7 +10,10 @@ from playwright.sync_api import Browser, Page
 from sgcc_alert.notch_service import NotchService
 
 
-TIMEOUT = 10 * 1000  # millisecond
+logger = logging.getLogger(__name__)
+
+
+TIMEOUT = 5 * 1000  # millisecond
 WEB_URL_LOGIN = 'https://www.95598.cn/osgweb/login'
 
 
@@ -19,6 +23,7 @@ XPATH_PASSWORD_INPUT = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[2]/di
 XPATH_AGREE_TOS_CHECKBOX = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[3]/div/span[2]'
 XPATH_LOGIN_BUTTON = '//*[@id="login_box"]/div[2]/div[1]/form/div[2]/div/button'
 XPATH_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
+XPATH_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
 CLASS_LOGIN_ERR_TIPS = 'errmsg-tip'
 SCRIPT_TPL_IMG_ENCODE = '''
     () => {{
@@ -41,6 +46,10 @@ ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 DRAG_SLIDE_SPEED_UP_RATIO = 0.8
 DRAG_SLIDE_SPEED_UP_ACCELERATION = 10
 DRAG_SLIDE_TIME_STEP = 0.1
+SLIDE_X_OFFSET_FACTOR = 1.05
+
+
+REFRESH_CAPTCHA_RETRY_LIMIT = 5
 
 
 class LoginError(Exception):
@@ -87,14 +96,43 @@ class WebPageService:
         # captcha image loading costs much more time
         page.wait_for_timeout(TIMEOUT)
 
-        self._verify_slide_captcha(page)
+        self._verify_slide_captcha_with_retry(page)
+        page.wait_for_timeout(10)
+
+    def _verify_slide_captcha_with_retry(self, page: Page):
+        retries = 0
+        while True:
+            try:
+                self._verify_slide_captcha(page)
+            except CaptchaValidationError as e:
+                if retries < REFRESH_CAPTCHA_RETRY_LIMIT:
+                    time.sleep(1)
+                    retries += 1
+                else:
+                    break
+            except (LoginRateLimitError, LoginAccountPasswordError, LoginError) as e:
+                raise
+            else:
+                break
 
     def _verify_slide_captcha(self, page: Page) -> None:
-        bg_data_url, slide_data_url = self._identify_slide_captcha(page)
-        notch_service = NotchService(bg_data_url, slide_data_url)
-        x_offset, _ = notch_service.recognize_notch()
+        x_ordinate, _ = self._recognize_notch_ordinate(page)
 
-        self._slide_block(page, x_offset)
+        # when x_ordinate is equal to 0, it means no effective recognization
+        retries = 0
+        while x_ordinate == 0 and retries < REFRESH_CAPTCHA_RETRY_LIMIT:
+            self._refresh_captcha(page)
+            page.wait_for_timeout(TIMEOUT)
+            x_ordinate, _ = self._recognize_notch_ordinate(page)
+            retries += 1
+
+        # raise without attempt to save daily login times limit
+        if x_ordinate == 0:
+            raise CaptchaValidationError(ERR_MSG_CAPTCHA_WRONG)
+
+        # the factor on x_offset is from experience
+        # which makes the slide block being in place
+        self._slide_block(page, x_ordinate * SLIDE_X_OFFSET_FACTOR)
         page.wait_for_timeout(TIMEOUT)
 
         err_tip_div = page.locator(f'.{CLASS_LOGIN_ERR_TIPS}')
@@ -104,7 +142,7 @@ class WebPageService:
                 raise LoginRateLimitError(f'Login rate limit error: {ERR_MSG_REACH_LOGIN_LIMIT}')
             if err_msg == ERR_MSG_CAPTCHA_WRONG:
                 raise CaptchaValidationError(ERR_MSG_CAPTCHA_WRONG)
-            if err_msg == ERR_MSG_WRONG_ACCOUNT:
+            if err_msg == ERR_MSG_WRONG_ACCOUNT_PWD:
                 raise LoginAccountPasswordError(ERR_MSG_WRONG_ACCOUNT_PWD)
             raise LoginError(f'Login failed: {LoginError}')
         if page.url == WEB_URL_LOGIN:
@@ -124,6 +162,10 @@ class WebPageService:
         return bg_img_data_url, slide_img_data_url
 
     def _slide_block(self, page: Page, x_offset: float) -> None:
+        """
+        assume the page is with captcha,
+        verify by slide action with the distance according to given offset
+        """
         slide_button = page.locator(f'xpath={XPATH_CAPTCHA_SLIDE_BUTTON}')
         slide_button_box = slide_button.bounding_box()
         box_x = slide_button_box['x'] + slide_button_box['width'] / 2
@@ -164,3 +206,18 @@ class WebPageService:
             cur_offset += span
             tracks.append(round(cur_offset, 4))
         return tracks
+
+    @staticmethod
+    def _refresh_captcha(page: Page):
+        refresh_button = page.locator(f'xpath={XPATH_CAPTCHA_REFRESH_BUTTON}')
+        refresh_button_box = refresh_button.bounding_box()
+        box_x = refresh_button_box['x'] + refresh_button_box['width'] / 2
+        box_y = refresh_button_box['y'] + refresh_button_box['height'] / 2
+
+        page.mouse.click(box_x,box_y)
+
+    def _recognize_notch_ordinate(self, page: Page) -> Tuple[int, int]:
+        bg_data_url, slide_data_url = self._identify_slide_captcha(page)
+        notch_service = NotchService(bg_data_url, slide_data_url)
+        x_ordinate, y_ordinate = notch_service.recognize_notch()
+        return x_ordinate, y_ordinate
