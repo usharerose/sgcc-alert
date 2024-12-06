@@ -10,6 +10,9 @@ run: build clean-container
 ssh:
 	docker-compose exec sgcc-alert-run /bin/bash
 
+test:
+	python -m pytest -sv --disable-warnings -p no:cacheprovider tests/*
+
 clean-pyc:
 	# clean all pyc files
 	find . -name '__pycache__' | xargs rm -rf | cat
