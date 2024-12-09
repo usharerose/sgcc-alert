@@ -4,9 +4,10 @@ Service for SGCC web page manipulation
 import logging
 import random
 import time
-from typing import List, Tuple
+from typing import List, Optional, Tuple, TypedDict
 
 from playwright.sync_api import Page
+from playwright.sync_api._generated import ElementHandle  # NOQA
 
 from .notch_service import NotchService
 
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 5 * 1000  # millisecond
 WEB_URL_LOGIN = 'https://www.95598.cn/osgweb/login'
+WEB_URL_MY_ACCOUNT = 'https://www.95598.cn/osgweb/my95598'
+WEB_URL_DOOR_NUMBER_MANAGER = 'https://www.95598.cn/osgweb/doorNumberManeger'
 
 
 XPATH_LOGIN_BY_ACCOUNT = '//*[@id="login_box"]/div[1]/div[3]'
@@ -23,6 +26,12 @@ XPATH_ACCOUNT_INPUT = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[1]/div
 XPATH_PASSWORD_INPUT = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[2]/div/div/input'
 XPATH_AGREE_TOS_CHECKBOX = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[3]/div/span[2]'
 XPATH_LOGIN_BUTTON = '//*[@id="login_box"]/div[2]/div[1]/form/div[2]/div/button'
+XPATH_MY_ACCOUNT_RESIDENTS_DROP_DOWN_BUTTON = '//*[@id="member_info"]/div/div/div/div/div[2]/ul/li[3]/div'
+XPATH_MY_ACCOUNT_RESIDENTS_DROP_DOWN_MENU = '/html/body/ul'
+XPATH_DOOR_NUM_MANAGER_DOOR_INFO_DIV = (
+    'xpath=/html/body/div/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
+    '/div/div/div/div[2]/div[1]/div/div[1]/div/div[1]/div[2]/div/div/div'
+)
 XPATH_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
 XPATH_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
 CLASS_LOGIN_ERR_TIPS = 'errmsg-tip'
@@ -42,6 +51,7 @@ SELECTOR_CAPTCHA_BLOCK_IMG = '#slideVerify > canvas.slide-verify-block'
 ERR_MSG_WRONG_ACCOUNT_PWD = '账号或密码错误，如连续错误5次，账号将被锁定20分钟，20分钟后自动解锁。'
 ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
+ERR_MSG_LOAD_RESIDENTS_FAILED = 'Load resident info from /osgweb/doorNumberManeger failed'
 
 
 DRAG_SLIDE_SPEED_UP_RATIO = 0.8
@@ -51,6 +61,7 @@ SLIDE_X_OFFSET_FACTOR = 1.05
 
 
 REFRESH_CAPTCHA_RETRY_LIMIT = 5
+REFRESH_RESIDENT_INFO_RETRY_LIMIT = 10
 
 
 class LoginError(Exception):
@@ -71,6 +82,25 @@ class LoginRateLimitError(LoginError):
 class LoginAccountPasswordError(LoginError):
 
     pass
+
+
+class LoadResidentInfoError(Exception):
+
+    pass
+
+
+class ResidentItem(TypedDict):
+
+    resident_id: int
+    developer_name: str
+
+
+class ResidentInfoItem(TypedDict):
+
+    resident_id: int
+    is_main_resident: bool
+    resident_address: str
+    developer_name: str
 
 
 class WebPageService:
@@ -228,3 +258,82 @@ class WebPageService:
         notch_service = NotchService(bg_data_url, slide_data_url)
         x_ordinate, y_ordinate = notch_service.recognize_notch()
         return x_ordinate, y_ordinate
+
+    # deprecated
+    @staticmethod
+    def get_residents_from_profile(page: Page) -> List[ResidentItem]:
+        """
+        get the bound residents of login account
+        """
+        page.goto(url=WEB_URL_MY_ACCOUNT, timeout=TIMEOUT)
+        drop_down_button = page.locator(f'xpath={XPATH_MY_ACCOUNT_RESIDENTS_DROP_DOWN_BUTTON}')
+        drop_down_button.wait_for(state='visible', timeout=TIMEOUT)
+        drop_down_button.click()
+        drop_down_menu = page.locator(f'xpath={XPATH_MY_ACCOUNT_RESIDENTS_DROP_DOWN_MENU}')
+        drop_down_menu.wait_for(state='visible', timeout=TIMEOUT)
+        resident_list_item = drop_down_menu.locator('li')
+        result = []
+        for item in resident_list_item.element_handles():
+            text = item.inner_text().strip()
+            developer_name, resident_id_string = text.split(':')
+            resident_id = int(resident_id_string)
+            resident_item: ResidentItem = {
+                'resident_id': resident_id,
+                'developer_name': developer_name
+            }
+            result.append(resident_item)
+        return result
+
+    def get_residents(self, page: Page) -> Optional[List[ResidentInfoItem]]:
+        retries = 0
+        result: Optional[List[ResidentInfoItem]] = None
+        while retries < REFRESH_RESIDENT_INFO_RETRY_LIMIT:
+            try:
+                result = self._get_residents(page)
+            except LoadResidentInfoError:
+                time.sleep(2)
+                retries += 1
+        return result
+
+    @staticmethod
+    def _get_residents(page: Page) -> List[ResidentInfoItem]:
+        """
+        get the bound residents of login account from doorNumberManager page
+        """
+        page.goto(url=WEB_URL_DOOR_NUMBER_MANAGER, timeout=TIMEOUT)
+        door_info_div = page.locator(XPATH_DOOR_NUM_MANAGER_DOOR_INFO_DIV)
+        door_info_div.wait_for(state='attached', timeout=TIMEOUT)
+        sections = door_info_div.locator('section')
+        result = []
+        for section in sections.element_handles():
+            developer_span: ElementHandle
+            is_main_door_span: ElementHandle
+            user_info_div: ElementHandle
+            resident_id_paragraph: ElementHandle
+            resident_addr_paragraph: ElementHandle
+
+            developer_span, is_main_door_span, _ = section.query_selector_all('.title-info span')
+
+            developer_name = developer_span.inner_text().strip()
+
+            is_main_resident = True
+            is_main_door_span_class = is_main_door_span.get_attribute('class')
+            if is_main_door_span_class == 'set-main-door':
+                is_main_resident = False
+
+            user_info_div, *_ = section.query_selector_all('.main-info div')
+            resident_id_paragraph, resident_addr_paragraph = user_info_div.query_selector_all('p')
+            try:
+                resident_id = int((resident_id_paragraph.get_attribute('title') or '').strip())
+            except ValueError:
+                raise LoadResidentInfoError(ERR_MSG_LOAD_RESIDENTS_FAILED)
+            resident_address = (resident_addr_paragraph.get_attribute('title') or '').strip()
+
+            resident_info_item: ResidentInfoItem = {
+                'resident_id': resident_id,
+                'is_main_resident': is_main_resident,
+                'resident_address': resident_address,
+                'developer_name': developer_name
+            }
+            result.append(resident_info_item)
+        return result
