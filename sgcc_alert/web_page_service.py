@@ -1,6 +1,8 @@
 """
 Service for SGCC web page manipulation
 """
+from collections import OrderedDict
+import datetime
 import logging
 import random
 import time
@@ -19,6 +21,7 @@ TIMEOUT = 5 * 1000  # millisecond
 WEB_URL_LOGIN = 'https://www.95598.cn/osgweb/login'
 WEB_URL_MY_ACCOUNT = 'https://www.95598.cn/osgweb/my95598'
 WEB_URL_DOOR_NUMBER_MANAGER = 'https://www.95598.cn/osgweb/doorNumberManeger'
+WEB_URL_BALANCE_QUERY = 'https://www.95598.cn/osgweb/userAcc'
 
 
 XPATH_LOGIN_BY_ACCOUNT = '//*[@id="login_box"]/div[1]/div[3]'
@@ -31,6 +34,19 @@ XPATH_MY_ACCOUNT_RESIDENTS_DROP_DOWN_MENU = '/html/body/ul'
 XPATH_DOOR_NUM_MANAGER_DOOR_INFO_DIV = (
     'xpath=/html/body/div/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
     '/div/div/div/div[2]/div[1]/div/div[1]/div/div[1]/div[2]/div/div/div'
+)
+XPATH_BALANCE_RESIDENTS_DROP_DOWN_BUTTON = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
+    '/div/div/div/div[2]/div/div[1]/div/ul/li/div[2]/div[1]/span/span/i'
+)
+XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU = '/html/body/div[2]/div[1]/div[1]/ul'
+XPATH_BALANCE_RESIDENT_NUM_SPAN = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div/div[1]'
+    '/div[2]/div/div/div/div[2]/div/div[1]/div/ul/div/li[1]/span[2]'
+)
+XPATH_BALANCE_DATA_DIV = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div'
+    '/div[1]/div[2]/div/div/div/div[2]/div/div[2]/div[1]/div'
 )
 XPATH_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
 XPATH_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
@@ -52,6 +68,9 @@ ERR_MSG_WRONG_ACCOUNT_PWD = '账号或密码错误，如连续错误5次，账�
 ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 ERR_MSG_LOAD_RESIDENTS_FAILED = 'Load resident info from /osgweb/doorNumberManeger failed'
+ERR_MSG_TML_RESIDENT_OVERFLOW = (
+    'Index of requested resident <{idx}> is overflowed than the available capacity <{amount}>'
+)
 
 
 DRAG_SLIDE_SPEED_UP_RATIO = 0.8
@@ -89,6 +108,11 @@ class LoadResidentInfoError(Exception):
     pass
 
 
+class ResidentOverflowError(Exception):
+
+    pass
+
+
 class ResidentItem(TypedDict):
 
     resident_id: int
@@ -101,6 +125,18 @@ class ResidentInfoItem(TypedDict):
     is_main_resident: bool
     resident_address: str
     developer_name: str
+
+
+class BalanceInfo(TypedDict):
+
+    ordinal_date: int
+    balance: float
+    estimate_remain_days: float
+
+
+class BalanceInfoWithResidentID(BalanceInfo):
+
+    resident_id: int
 
 
 class WebPageService:
@@ -338,3 +374,77 @@ class WebPageService:
             }
             result.append(resident_info_item)
         return result
+
+    def get_resident_balances(self, page: Page) -> OrderedDict[int, BalanceInfo]:
+        """
+        get the balance of each bound resident
+        """
+        page.goto(url=WEB_URL_BALANCE_QUERY, timeout=TIMEOUT)
+        dom_items = self._get_balance_residents_list_items(page)
+        avail_resident_amounts = len(dom_items)
+        result: OrderedDict[int, BalanceInfo] = OrderedDict()
+        for idx in range(avail_resident_amounts):
+            balance_data = self._get_resident_balance(page, idx)
+            result[balance_data['resident_id']] = {
+                'ordinal_date': balance_data['ordinal_date'],
+                'balance': balance_data['balance'],
+                'estimate_remain_days': balance_data['estimate_remain_days']
+            }
+        return result
+
+    def _get_resident_balance(self, page: Page, selection_idx: int) -> BalanceInfoWithResidentID:
+        page.goto(url=WEB_URL_BALANCE_QUERY, timeout=TIMEOUT)
+        dom_items = self._get_balance_residents_list_items(page)
+        if selection_idx > len(dom_items) - 1:
+            raise ResidentOverflowError(
+                ERR_MSG_TML_RESIDENT_OVERFLOW.format(
+                    idx=selection_idx,
+                    amount=len(dom_items)
+                )
+            )
+        target_list_item = dom_items[selection_idx]
+        target_list_item.click()
+
+        resident_num_span = page.locator(f'xpath={XPATH_BALANCE_RESIDENT_NUM_SPAN}')
+        resident_num_span.wait_for(state='visible', timeout=TIMEOUT)
+        resident_id = int(resident_num_span.inner_text().strip())
+
+        data_div = page.locator(f'xpath={XPATH_BALANCE_DATA_DIV}')
+        data_div.wait_for(state='visible', timeout=TIMEOUT)
+        detailed_data_divs = data_div.locator('> div')
+        date_div, remain_div = detailed_data_divs.element_handles()
+
+        _, date_span = date_div.query_selector_all('> span')
+        datetime_string = (date_span.inner_text() or '').strip()
+        ordinal_date = datetime.datetime.strptime(
+            datetime_string,
+            '%Y-%m-%d %H:%M:%S'
+        ).toordinal()
+
+        balance_div, est_remain_div = remain_div.query_selector_all('> div')
+        _, balance_span, _ = balance_div.query_selector_all('> span')
+        balance = float(balance_span.inner_text())
+        _, est_remain_span, _ = est_remain_div.query_selector_all('> span')
+        est_remain_days = int(est_remain_span.inner_text())
+        result: BalanceInfoWithResidentID = {
+            'ordinal_date': ordinal_date,
+            'resident_id': resident_id,
+            'balance': balance,
+            'estimate_remain_days': est_remain_days
+        }
+        return result
+
+    @staticmethod
+    def _get_balance_residents_list_items(page: Page) -> List[ElementHandle]:
+        """
+        click button to get list items of available residents in /osgweb/userAcc page
+        """
+        resident_selection_button = page.locator(f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_BUTTON}')
+        resident_selection_button.wait_for(state='visible', timeout=TIMEOUT)
+        resident_selection_button.click()
+
+        drop_down_unordered_list = page.locator(f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU}')
+        drop_down_unordered_list.wait_for(state='visible', timeout=TIMEOUT)
+        resident_list_items = drop_down_unordered_list.locator('li')
+        dom_items = [item for item in resident_list_items.element_handles()]
+        return dom_items
