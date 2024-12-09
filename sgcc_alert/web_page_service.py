@@ -290,6 +290,7 @@ class WebPageService:
         while retries < REFRESH_RESIDENT_INFO_RETRY_LIMIT:
             try:
                 result = self._get_residents(page)
+                return result
             except LoadResidentInfoError:
                 time.sleep(2)
                 retries += 1
