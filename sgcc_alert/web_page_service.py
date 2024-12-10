@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple, TypedDict
 
 from playwright.sync_api import Page
 from playwright.sync_api._generated import ElementHandle  # NOQA
+from playwright._impl._errors import TimeoutError  # NOQA
 
 from .notch_service import NotchService
 
@@ -380,7 +381,11 @@ class WebPageService:
         get the balance of each bound resident
         """
         page.goto(url=WEB_URL_BALANCE_QUERY, timeout=TIMEOUT)
-        dom_items = self._get_balance_residents_list_items(page)
+        dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU}'
+        )
         avail_resident_amounts = len(dom_items)
         result: OrderedDict[int, BalanceInfo] = OrderedDict()
         for idx in range(avail_resident_amounts):
@@ -394,7 +399,11 @@ class WebPageService:
 
     def _get_resident_balance(self, page: Page, selection_idx: int) -> BalanceInfoWithResidentID:
         page.goto(url=WEB_URL_BALANCE_QUERY, timeout=TIMEOUT)
-        dom_items = self._get_balance_residents_list_items(page)
+        dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU}'
+        )
         if selection_idx > len(dom_items) - 1:
             raise ResidentOverflowError(
                 ERR_MSG_TML_RESIDENT_OVERFLOW.format(
@@ -444,6 +453,32 @@ class WebPageService:
         resident_selection_button.click()
 
         drop_down_unordered_list = page.locator(f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU}')
+        drop_down_unordered_list.wait_for(state='visible', timeout=TIMEOUT)
+        resident_list_items = drop_down_unordered_list.locator('li')
+        dom_items = [item for item in resident_list_items.element_handles()]
+        return dom_items
+
+    @staticmethod
+    def _get_drop_down_list_items(
+        page: Page,
+        button_selector: str,
+        drop_down_selector: str
+    ) -> List[ElementHandle]:
+        """
+        DOM elements of available residents
+        :param page: SGCC web page
+        :type page: playwright.sync_api.Page
+        :param button_selector: A selector to use when resolving related button DOM element
+        :type button_selector: str
+        :param drop_down_selector: A selector to use when resolving related drop down DOM element
+        :type drop_down_selector: str
+        :return: List[ElementHandle]
+        """
+        button = page.locator(button_selector)
+        button.wait_for(state='visible', timeout=TIMEOUT)
+        button.click()
+
+        drop_down_unordered_list = page.locator(drop_down_selector)
         drop_down_unordered_list.wait_for(state='visible', timeout=TIMEOUT)
         resident_list_items = drop_down_unordered_list.locator('li')
         dom_items = [item for item in resident_list_items.element_handles()]
