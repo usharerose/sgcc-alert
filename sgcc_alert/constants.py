@@ -24,6 +24,19 @@ SGCC_TIMEOUT_LOAD_PAGE = 3 * 1000
 # ###########################################################
 #  'State Grid Corporation of China' Web Page HTML selectors
 # ###########################################################
+SGCC_XPATH_BALANCE_DETAILED_DIV = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div'
+    '/div[1]/div[2]/div/div/div/div[2]/div/div[2]/div[1]/div'
+)
+SGCC_XPATH_BALANCE_RESIDENT_ID_SPAN = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div/div[1]'
+    '/div[2]/div/div/div/div[2]/div/div[1]/div/ul/div/li[1]/span[2]'
+)
+SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_BUTTON = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
+    '/div/div/div/div[2]/div/div[1]/div/ul/li/div[2]/div[1]/span/span/i'
+)
+SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_MENU = '/html/body/div[2]/div[1]/div[1]/ul'
 SGCC_XPATH_USAGE_HIST_DAILY_DETAILED_TBODY = (
     '//*[@id="pane-second"]/div[2]/div[2]/div[1]/div[3]/table/tbody'
 )
@@ -68,6 +81,7 @@ class DateGranularity(Enum):
 
 
 DATE_FORMAT = '%Y-%m-%d'
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 # ###############
