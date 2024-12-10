@@ -68,6 +68,13 @@ XPATH_USAGE_HIST_RESIDENT_NUM_SPAN = (
 XPATH_USAGE_HIST_DETAILED_TBODY = (
     '//*[@id="pane-first"]/div[1]/div[2]/div[2]/div/div[3]/table/tbody'
 )
+XPATH_USAGE_HIST_DAILY_TAB_DIV = '//*[@id="tab-second"]'
+XPATH_USAGE_HIST_DAILY_RECENT_THIRTY_CHECKBOX_SPAN = (
+    '//*[@id="pane-second"]/div[1]/div/label[2]/span[1]'
+)
+XPATH_USAGE_HIST_DAILY_DETAILED_TBODY = (
+    '//*[@id="pane-second"]/div[2]/div[2]/div[1]/div[3]/table/tbody'
+)
 XPATH_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
 XPATH_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
 CLASS_LOGIN_ERR_TIPS = 'errmsg-tip'
@@ -634,6 +641,106 @@ class WebPageService:
                 'granularity': 'monthly',
                 'electricity_usage': elec_usage,
                 'electricity_charge': charge
+            }
+            result.append(row)
+        return resident_id, result
+
+    def get_daily_charges(self, page: Page) -> OrderedDict[int, List[ElectricityUsageInfo]]:
+        """
+        get recent daily usage history data of each bound resident
+        """
+        page.goto(url=WEB_URL_USAGE_HIST_QUERY, timeout=TIMEOUT)
+        resident_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN}'
+        )
+        available_resident_amounts = len(resident_dom_items)
+
+        result: OrderedDict[int, List[ElectricityUsageInfo]] = OrderedDict()
+
+        for resident_idx in range(available_resident_amounts):
+            try:
+                resident_id, charge_data = self._get_daily_charge(page, resident_idx)
+            except TimeoutError:
+                logger.warning(
+                    f'Timeout when get monthly data of index {resident_idx} resident'
+                )
+                continue
+            if resident_id not in result:
+                result[resident_id] = []
+            for item in charge_data:
+                result[resident_id].append(item)
+        return result
+
+    def _get_daily_charge(
+        self,
+        page: Page,
+        resident_idx: int
+    ) -> Tuple[int, List[ElectricityUsageInfo]]:
+        # view /osgweb/electricityCharge page
+        page.goto(url=WEB_URL_USAGE_HIST_QUERY, timeout=TIMEOUT)
+
+        # select declared resident
+        resident_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN}'
+        )
+        if resident_idx > len(resident_dom_items) - 1:
+            raise OverflowError(
+                ERR_MSG_TML_OVERFLOW.format(
+                    entity='resident option',
+                    idx=resident_idx,
+                    amount=len(resident_dom_items)
+                )
+            )
+        target_resident_dom = resident_dom_items[resident_idx]
+        target_resident_dom.click()
+        page.wait_for_timeout(timeout=TIMEOUT)
+
+        # parse identifier of selected resident
+        resident_num_span = page.locator(f'xpath={XPATH_USAGE_HIST_RESIDENT_NUM_SPAN}')
+        resident_num_span.wait_for(state='visible', timeout=TIMEOUT)
+        resident_id = int(resident_num_span.inner_text().strip())
+
+        # switch to daily data tab
+        daily_usage_tab_button = page.locator(f'xpath={XPATH_USAGE_HIST_DAILY_TAB_DIV}')
+        daily_usage_tab_button.wait_for(state='visible', timeout=TIMEOUT)
+        daily_usage_tab_button.click()
+
+        # switch to recent 30 days data
+        recent_thirty_days_checkbox = page.locator(
+            f'xpath={XPATH_USAGE_HIST_DAILY_RECENT_THIRTY_CHECKBOX_SPAN}'
+        )
+        recent_thirty_days_checkbox.wait_for(state='visible', timeout=TIMEOUT)
+        recent_thirty_days_checkbox.click()
+        page.wait_for_timeout(timeout=TIMEOUT)
+
+        # get table body DOM of detailed data
+        detailed_tbody_dom = page.locator(f'xpath={XPATH_USAGE_HIST_DAILY_DETAILED_TBODY}')
+        detailed_tbody_dom.wait_for(state='visible', timeout=TIMEOUT)
+        tr_doms = detailed_tbody_dom.locator('> tr')
+
+        result: List[ElectricityUsageInfo] = []
+        for tr in tr_doms.element_handles():
+            date_td, usage_td, _ = tr.query_selector_all('td')
+
+            date_cell_div = date_td.query_selector('div')
+            assert date_cell_div is not None
+            date_string = date_cell_div.inner_text().strip()
+            ordinal_date = datetime.datetime.strptime(date_string, '%Y-%m-%d').toordinal()
+
+            elec_usage_div = usage_td.query_selector('div')
+            elec_usage = None
+            if elec_usage_div:
+                elec_usage = float(elec_usage_div.inner_text().strip())  # kilowatt-hour
+
+            row: ElectricityUsageInfo = {
+                'ordinal_date': ordinal_date,
+                'granularity': 'daily',
+                'electricity_usage': elec_usage,
+                'electricity_charge': None
             }
             result.append(row)
         return resident_id, result
