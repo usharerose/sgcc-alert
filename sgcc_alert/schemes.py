@@ -4,6 +4,14 @@ Object type-hint definition
 from typing import Optional, TypedDict
 
 
+class Resident(TypedDict):
+
+    resident_id: int
+    is_main: bool
+    resident_address: Optional[str]
+    developer_name: str
+
+
 class Usage(TypedDict):
 
     date: int                     # ordinal date, start date of the period

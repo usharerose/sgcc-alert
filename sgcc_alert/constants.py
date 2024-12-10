@@ -37,6 +37,10 @@ SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_BUTTON = (
     '/div/div/div/div[2]/div/div[1]/div/ul/li/div[2]/div[1]/span/span/i'
 )
 SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_MENU = '/html/body/div[2]/div[1]/div[1]/ul'
+SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV = (
+    'xpath=/html/body/div/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
+    '/div/div/div/div[2]/div[1]/div/div[1]/div/div[1]/div[2]/div/div/div'
+)
 SGCC_XPATH_USAGE_HIST_DAILY_DETAILED_TBODY = (
     '//*[@id="pane-second"]/div[2]/div[2]/div[1]/div[3]/table/tbody'
 )
@@ -87,6 +91,9 @@ DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 # ###############
 #  Error Message
 # ###############
+ERR_MSG_LOAD_RESIDENT_DETAILS_FAILED = (
+    'Load resident info from /osgweb/doorNumberManeger failed'
+)
 ERR_MSG_TML_OVERFLOW = ((
     'Requested {serial} {entity_name} is overflowed '
     'than available capacity: {amount}'
