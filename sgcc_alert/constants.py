@@ -31,6 +31,16 @@ SGCC_XPATH_USAGE_HIST_DAILY_RECENT_THIRTY_DAYS_CHECKBOX_SPAN = (
     '//*[@id="pane-second"]/div[1]/div/label[2]/span[1]'
 )
 SGCC_XPATH_USAGE_HIST_DAILY_TAB_DIV = '//*[@id="tab-second"]'
+SGCC_XPATH_USAGE_HIST_MONTHLY_DETAILED_TBODY = (
+    '//*[@id="pane-first"]/div[1]/div[2]/div[2]/div/div[3]/table/tbody'
+)
+SGCC_XPATH_USAGE_HIST_MONTHLY_TAB_DIV = '//*[@id="tab-first"]'
+SGCC_XPATH_USAGE_HIST_MONTHLY_YEARS_DROPDOWN = (
+    '/html/body/div[3]/div[1]/div[1]/ul'
+)
+SGCC_XPATH_USAGE_HIST_MONTHLY_YEARS_DROPDOWN_BUTTON = (
+    '//*[@id="pane-first"]/div[1]/div[1]/div[1]/div'
+)
 SGCC_XPATH_USAGE_HIST_RESIDENT_ID_SPAN = (
     '//*[@id="main"]/div/div[1]/div/ul/div/li[1]/span[2]'
 )
@@ -39,6 +49,12 @@ SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN = (
 )
 SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN_BUTTON = (
     '//*[@id="main"]/div/div[1]/div/ul/li/div[2]/div[1]/span/span/i'
+)
+SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN = (
+    '/html/body/div[3]/div[1]/div[1]/ul'
+)
+SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN_BUTTON = (
+    '//*[@id="pane-first"]/div[1]/div[1]/div[1]/div'
 )
 
 
