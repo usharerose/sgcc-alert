@@ -23,6 +23,7 @@ WEB_URL_LOGIN = 'https://www.95598.cn/osgweb/login'
 WEB_URL_MY_ACCOUNT = 'https://www.95598.cn/osgweb/my95598'
 WEB_URL_DOOR_NUMBER_MANAGER = 'https://www.95598.cn/osgweb/doorNumberManeger'
 WEB_URL_BALANCE_QUERY = 'https://www.95598.cn/osgweb/userAcc'
+WEB_URL_USAGE_HIST_QUERY = 'https://www.95598.cn/osgweb/electricityCharge'
 
 
 XPATH_LOGIN_BY_ACCOUNT = '//*[@id="login_box"]/div[1]/div[3]'
@@ -49,6 +50,24 @@ XPATH_BALANCE_DATA_DIV = (
     '//*[@id="app"]/div/div/article/div/div/div[2]/div/div'
     '/div[1]/div[2]/div/div/div/div[2]/div/div[2]/div[1]/div'
 )
+XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN_BUTTON = (
+    '//*[@id="main"]/div/div[1]/div/ul/li/div[2]/div[1]/span/span/i'
+)
+XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN = (
+    '/html/body/div[2]/div[1]/div[1]/ul'
+)
+XPATH_USAGE_HIST_YEAR_DROP_DOWN_BUTTON = (
+    '//*[@id="pane-first"]/div[1]/div[1]/div[1]/div'
+)
+XPATH_USAGE_HIST_YEAR_DROP_DOWN = (
+    '/html/body/div[3]/div[1]/div[1]/ul'
+)
+XPATH_USAGE_HIST_RESIDENT_NUM_SPAN = (
+    '//*[@id="main"]/div/div[1]/div/ul/div/li[1]/span[2]'
+)
+XPATH_USAGE_HIST_DETAILED_TBODY = (
+    '//*[@id="pane-first"]/div[1]/div[2]/div[2]/div/div[3]/table/tbody'
+)
 XPATH_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
 XPATH_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
 CLASS_LOGIN_ERR_TIPS = 'errmsg-tip'
@@ -69,8 +88,8 @@ ERR_MSG_WRONG_ACCOUNT_PWD = '账号或密码错误，如连续错误5次，账�
 ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 ERR_MSG_LOAD_RESIDENTS_FAILED = 'Load resident info from /osgweb/doorNumberManeger failed'
-ERR_MSG_TML_RESIDENT_OVERFLOW = (
-    'Index of requested resident <{idx}> is overflowed than the available capacity <{amount}>'
+ERR_MSG_TML_OVERFLOW = (
+    'Index of requested {entity} <{idx}> is overflowed than the available capacity <{amount}>'
 )
 
 
@@ -109,7 +128,7 @@ class LoadResidentInfoError(Exception):
     pass
 
 
-class ResidentOverflowError(Exception):
+class OverflowError(Exception):
 
     pass
 
@@ -138,6 +157,14 @@ class BalanceInfo(TypedDict):
 class BalanceInfoWithResidentID(BalanceInfo):
 
     resident_id: int
+
+
+class ElectricityUsageInfo(TypedDict):
+
+    ordinal_date: int
+    granularity: str
+    electricity_usage: Optional[float]
+    electricity_charge: Optional[float]
 
 
 class WebPageService:
@@ -405,8 +432,9 @@ class WebPageService:
             f'xpath={XPATH_BALANCE_RESIDENTS_DROP_DOWN_MENU}'
         )
         if selection_idx > len(dom_items) - 1:
-            raise ResidentOverflowError(
-                ERR_MSG_TML_RESIDENT_OVERFLOW.format(
+            raise OverflowError(
+                ERR_MSG_TML_OVERFLOW.format(
+                    entity='resident option',
                     idx=selection_idx,
                     amount=len(dom_items)
                 )
@@ -483,3 +511,129 @@ class WebPageService:
         resident_list_items = drop_down_unordered_list.locator('li')
         dom_items = [item for item in resident_list_items.element_handles()]
         return dom_items
+
+    def get_monthly_charges(self, page: Page) -> OrderedDict[int, List[ElectricityUsageInfo]]:
+        """
+        get the balance of each bound resident
+        """
+        page.goto(url=WEB_URL_USAGE_HIST_QUERY, timeout=TIMEOUT)
+        resident_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN}'
+        )
+        available_resident_amounts = len(resident_dom_items)
+        year_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_YEAR_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_YEAR_DROP_DOWN}'
+        )
+        avail_year_amounts = len(year_dom_items)
+
+        result: OrderedDict[int, List[ElectricityUsageInfo]] = OrderedDict()
+
+        for resident_idx in range(available_resident_amounts):
+            for year_idx in range(avail_year_amounts):
+                try:
+                    resident_id, charge_data = self._get_monthly_charge(page, resident_idx, year_idx)
+                except TimeoutError:
+                    logger.warning(
+                        f'Timeout when get monthly data of index {resident_idx} resident in index {year_idx} year'
+                    )
+                    continue
+                if resident_id not in result:
+                    result[resident_id] = []
+                for item in charge_data:
+                    result[resident_id].append(item)
+        return result
+
+    def _get_monthly_charge(
+        self,
+        page: Page,
+        resident_idx: int,
+        year_idx: int
+    ) -> Tuple[int, List[ElectricityUsageInfo]]:
+        # view /osgweb/electricityCharge page
+        page.goto(url=WEB_URL_USAGE_HIST_QUERY, timeout=TIMEOUT)
+
+        # select declared resident
+        resident_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_RESIDENTS_DROP_DOWN}'
+        )
+        if resident_idx > len(resident_dom_items) - 1:
+            raise OverflowError(
+                ERR_MSG_TML_OVERFLOW.format(
+                    entity='resident option',
+                    idx=resident_idx,
+                    amount=len(resident_dom_items)
+                )
+            )
+        target_resident_dom = resident_dom_items[resident_idx]
+        target_resident_dom.click()
+        page.wait_for_timeout(timeout=TIMEOUT)
+
+        # parse identifier of selected resident
+        resident_num_span = page.locator(f'xpath={XPATH_USAGE_HIST_RESIDENT_NUM_SPAN}')
+        resident_num_span.wait_for(state='visible', timeout=TIMEOUT)
+        resident_id = int(resident_num_span.inner_text().strip())
+
+        # select declared year
+        year_dom_items = self._get_drop_down_list_items(
+            page,
+            f'xpath={XPATH_USAGE_HIST_YEAR_DROP_DOWN_BUTTON}',
+            f'xpath={XPATH_USAGE_HIST_YEAR_DROP_DOWN}'
+        )
+        if year_idx > len(year_dom_items) - 1:
+            raise OverflowError(
+                ERR_MSG_TML_OVERFLOW.format(
+                    entity='year option',
+                    idx=year_idx,
+                    amount=len(year_dom_items)
+                )
+            )
+        target_year_dom = year_dom_items[year_idx]
+        target_year_dom.click()
+        page.wait_for_timeout(timeout=TIMEOUT)
+
+        # get table body DOM of detailed data
+        detailed_tbody_dom = page.locator(f'xpath={XPATH_USAGE_HIST_DETAILED_TBODY}')
+        detailed_tbody_dom.wait_for(state='visible', timeout=TIMEOUT)
+        tr_doms = detailed_tbody_dom.locator('> tr')
+
+        result: List[ElectricityUsageInfo] = []
+        for tr in tr_doms.element_handles():
+            date_range_td, usage_td, charge_td = tr.query_selector_all('td')
+
+            start_date_string, end_date_string = map(
+                lambda item: item.inner_text().strip(),
+                date_range_td.query_selector_all('> div > span > span')
+            )
+            start_date_string = start_date_string[: -1]  # remove dash suffix
+            start_datetime = datetime.datetime.strptime(start_date_string, '%Y-%m-%d')
+            if start_datetime.day != 1:
+                logger.warning((
+                    f'The record is monthly-partial which would be skipped: '
+                    f'{start_date_string} ~ {end_date_string}'
+                ))
+                continue
+            ordinal_date = start_datetime.toordinal()
+
+            elec_usage_span = usage_td.query_selector('div > span')
+            elec_usage = None
+            if elec_usage_span:
+                elec_usage = float(elec_usage_span.inner_text().strip())  # kilowatt-hour
+
+            charge_span = charge_td.query_selector('div > span')
+            charge = None
+            if charge_span:
+                charge = float(charge_span.inner_text().strip())  # CNY
+            row: ElectricityUsageInfo = {
+                'ordinal_date': ordinal_date,
+                'granularity': 'monthly',
+                'electricity_usage': elec_usage,
+                'electricity_charge': charge
+            }
+            result.append(row)
+        return resident_id, result
