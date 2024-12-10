@@ -47,7 +47,7 @@ class NotchServiceTestCase(TestCase):
             CAPTCHA_CHERRY_DONUT_BG_DATA_URL,
             CAPTCHA_CHERRY_DONUT_SLIDE_DATA_URL
         )
-        actual_x, _ = service.recognize_notch()
+        actual_x, _ = service.locate_notch()
         self.assertIn(actual_x, range(270 - MARGIN_ERR, 270 + MARGIN_ERR + 1))
 
     def test_recognize_notch_with_chartreux(self):
@@ -55,7 +55,7 @@ class NotchServiceTestCase(TestCase):
             CAPTCHA_CHARTREUX_BG_DATA_URL,
             CAPTCHA_CHARTREUX_SLIDE_DATA_URL
         )
-        actual_x, _ = service.recognize_notch()
+        actual_x, _ = service.locate_notch()
         self.assertIn(actual_x, range(153 - MARGIN_ERR, 153 + MARGIN_ERR + 1))
 
     def test_recognize_notch_with_notes(self):
@@ -63,5 +63,5 @@ class NotchServiceTestCase(TestCase):
             CAPTCHA_NOTES_BG_DATA_URL,
             CAPTCHA_NOTES_SLIDE_DATA_URL
         )
-        actual_x, _ = service.recognize_notch()
+        actual_x, _ = service.locate_notch()
         self.assertIn(actual_x, range(199 - MARGIN_ERR, 199 + MARGIN_ERR + 1))
