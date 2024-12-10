@@ -42,7 +42,7 @@ SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_BUTTON = (
 )
 SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_MENU = '/html/body/div[2]/div[1]/div[1]/ul'
 SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV = (
-    'xpath=/html/body/div/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
+    '/html/body/div/div/div/article/div/div/div[2]/div/div/div[1]/div[2]'
     '/div/div/div/div[2]/div[1]/div/div[1]/div/div[1]/div[2]/div/div/div'
 )
 SGCC_XPATH_LOGIN_AGREE_TOS_CHECKBOX = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[3]/div/span[2]'
