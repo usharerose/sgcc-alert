@@ -9,12 +9,13 @@ import cv2
 import numpy as np
 from PIL import Image
 
-
-CANNY_LOWER_THRESHOLD = 50
-CANNY_UPPER_THRESHOLD = 100
-CV_BINARY_THRESH = 45.0
-CV_BINARY_MAXVAL = 255.0
-CV_KERNAL_SIZE = 4
+from .constants import (
+    CANNY_LOWER_THRESHOLD,
+    CANNY_UPPER_THRESHOLD,
+    CV_BINARY_THRESH,
+    CV_BINARY_MAXVAL,
+    CV_KERNAL_SIZE
+)
 
 
 class NotchService:
@@ -41,7 +42,7 @@ class NotchService:
     def slide_bytes(self) -> bytes:
         return self._slide_bytes
 
-    def recognize_notch(self) -> Tuple[int, int]:
+    def locate_notch(self) -> Tuple[int, int]:
         """
         recognize the notch for slide block in background image
         return the coordinate point of notch's left top
@@ -62,7 +63,10 @@ class NotchService:
         dx, dy = 0, 0
         for i, contour in enumerate(contours):
             x, y, w, h = cv2.boundingRect(contour)
-            if (abs(w - slide_width) / slide_width <= 0.05) and (abs(h - slide_height) / slide_height <= 0.05):
+            if all([
+                (abs(w - slide_width) / slide_width <= 0.05),
+                (abs(h - slide_height) / slide_height <= 0.05)
+            ]):
                 dx = x
                 dy = y
 
@@ -103,7 +107,7 @@ class NotchService:
         convert raw captcha background image to binary image
         perform morphological opening to remove noise
 
-        this is is the pre process for recognizing the notch
+        this is the pre-process for identifying the notch
         """
         bg_np = np.frombuffer(self._bg_bytes, dtype='uint8')
         bg_cv_np = cv2.imdecode(bg_np, cv2.IMREAD_COLOR)
