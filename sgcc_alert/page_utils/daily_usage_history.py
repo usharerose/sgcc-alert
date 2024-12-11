@@ -3,10 +3,10 @@ Utilities on electricity usage data with daily granularity
 """
 import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import List
 
 from playwright.sync_api import Page
-from playwright._impl._errors import TimeoutError  # NOQA
+from playwright._impl._errors import TimeoutError
 
 from .common import (
     get_ordinal_suffix,
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_daily_usage_history']
 
 
-def get_daily_usage_history(page: Page) -> Dict[int, List[Usage]]:
+def get_daily_usage_history(page: Page) -> List[Usage]:
     """
     get daily usage for each bound resident
     within recent 30 days
@@ -49,10 +49,10 @@ def get_daily_usage_history(page: Page) -> Dict[int, List[Usage]]:
     )
     avail_resident_amounts = len(resident_options)
 
-    result: Dict[int, List[Usage]] = {}
+    result: List[Usage] = []
     for idx in range(avail_resident_amounts):
         try:
-            resident_id, usages = _get_single_resident_daily_usage_history(
+            usages = _get_single_resident_daily_usage_history(
                 page,
                 idx
             )
@@ -63,9 +63,7 @@ def get_daily_usage_history(page: Page) -> Dict[int, List[Usage]]:
             ))
             continue
 
-        if resident_id not in result:
-            result[resident_id] = []
-        result[resident_id].extend(usages)
+        result.extend(usages)
 
     return result
 
@@ -73,7 +71,7 @@ def get_daily_usage_history(page: Page) -> Dict[int, List[Usage]]:
 def _get_single_resident_daily_usage_history(
     page: Page,
     resident_idx: int
-) -> Tuple[int, List[Usage]]:
+) -> List[Usage]:
     """
     get daily usage of single resident
     1. view the page
@@ -144,6 +142,7 @@ def _get_single_resident_daily_usage_history(
             elec_usage = float(elec_usage_div.inner_text().strip())
 
         record: Usage = {
+            'resident_id': resident_id,
             'date': ordinal_date,
             'granularity': DateGranularity.DAILY.value,
             'elec_usage': elec_usage,
@@ -151,4 +150,4 @@ def _get_single_resident_daily_usage_history(
         }
         data.append(record)
 
-    return resident_id, data
+    return data

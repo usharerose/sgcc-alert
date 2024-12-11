@@ -7,7 +7,6 @@ import time
 from typing import List, Tuple
 
 from playwright.sync_api import Page
-from playwright._impl._errors import TimeoutError  # NOQA
 
 from ..constants import (
     ERR_MSG_CAPTCHA_WRONG,

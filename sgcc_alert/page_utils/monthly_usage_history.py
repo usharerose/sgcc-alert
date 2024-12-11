@@ -3,10 +3,10 @@ Utilities on electricity usage data with monthly granularity
 """
 import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import List
 
 from playwright.sync_api import Page
-from playwright._impl._errors import TimeoutError  # NOQA
+from playwright._impl._errors import TimeoutError
 
 from .common import (
     get_ordinal_suffix,
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_monthly_usage_history']
 
 
-def get_monthly_usage_history(page: Page) -> Dict[int, List[Usage]]:
+def get_monthly_usage_history(page: Page) -> List[Usage]:
     """
     get monthly usage and charge for each bound resident
     within recent 3 years
@@ -59,11 +59,11 @@ def get_monthly_usage_history(page: Page) -> Dict[int, List[Usage]]:
     )
     avail_year_amounts = len(year_options)
 
-    result: Dict[int, List[Usage]] = {}
+    result: List[Usage] = []
     for resident_idx in range(avail_resident_amounts):
         for year_idx in range(avail_year_amounts):
             try:
-                resident_id, usages = _get_single_resident_monthly_usage_history(
+                usages = _get_single_resident_monthly_usage_history(
                     page,
                     resident_idx,
                     year_idx
@@ -76,9 +76,7 @@ def get_monthly_usage_history(page: Page) -> Dict[int, List[Usage]]:
                 ))
                 continue
 
-            if resident_id not in result:
-                result[resident_id] = []
-            result[resident_id].extend(usages)
+            result.extend(usages)
 
     return result
 
@@ -87,7 +85,7 @@ def _get_single_resident_monthly_usage_history(
     page: Page,
     resident_idx: int,
     year_idx: int
-) -> Tuple[int, List[Usage]]:
+) -> List[Usage]:
     """
     get monthly usage of single resident
     1. view the page
@@ -183,6 +181,7 @@ def _get_single_resident_monthly_usage_history(
             elec_charge = float(elec_charge_span.inner_text().strip())
 
         record: Usage = {
+            'resident_id': resident_id,
             'date': ordinal_date,
             'granularity': DateGranularity.MONTHLY.value,
             'elec_usage': elec_usage,
@@ -190,4 +189,4 @@ def _get_single_resident_monthly_usage_history(
         }
         data.append(record)
 
-    return resident_id, data
+    return data
