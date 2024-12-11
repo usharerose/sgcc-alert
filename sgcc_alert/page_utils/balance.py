@@ -3,10 +3,9 @@ Utilities on resident balance
 """
 import datetime
 import logging
-from typing import Dict, Tuple
+from typing import List
 
 from playwright.sync_api import Page
-from playwright._impl._errors import TimeoutError  # NOQA
 
 from .common import (
     get_ordinal_suffix,
@@ -33,7 +32,7 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_balance']
 
 
-def get_balance(page: Page) -> Dict[int, Balance]:
+def get_balance(page: Page) -> List[Balance]:
     """
     get current balance of each bound resident
     """
@@ -46,10 +45,10 @@ def get_balance(page: Page) -> Dict[int, Balance]:
     )
     avail_resident_amounts = len(resident_options)
 
-    result: Dict[int, Balance] = {}
+    result: List[Balance] = []
     for idx in range(avail_resident_amounts):
-        resident_id, balance_data = _get_single_resident_balance(page, idx)
-        result[resident_id] = balance_data
+        data = _get_single_resident_balance(page, idx)
+        result.append(data)
 
     return result
 
@@ -57,7 +56,7 @@ def get_balance(page: Page) -> Dict[int, Balance]:
 def _get_single_resident_balance(
     page: Page,
     resident_idx: int
-) -> Tuple[int, Balance]:
+) -> Balance:
     """
     get current balance of single resident
     1. view the page
@@ -115,10 +114,11 @@ def _get_single_resident_balance(
     est_remain_days = int(est_remain_days_span_dom.inner_text())
 
     record: Balance = {
+        'resident_id': resident_id,
         'date': ordinal_date,
         'granularity': DateGranularity.DAILY.value,
         'balance': balance,
         'est_remain_days': est_remain_days
     }
 
-    return resident_id, record
+    return record

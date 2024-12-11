@@ -14,6 +14,7 @@ class Resident(TypedDict):
 
 class Usage(TypedDict):
 
+    resident_id: int
     date: int                     # ordinal date, start date of the period
     granularity: str              # date granularity
     elec_usage: Optional[float]   # unit is kilowatt-hour
@@ -22,6 +23,7 @@ class Usage(TypedDict):
 
 class Balance(TypedDict):
 
+    resident_id: int
     date: int               # ordinal date, start date of the period
     granularity: str        # date granularity
     balance: float          # unit is CNY

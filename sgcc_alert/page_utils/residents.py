@@ -5,8 +5,7 @@ import logging
 from typing import List
 
 from playwright.sync_api import Page
-from playwright.sync_api._generated import ElementHandle  # NOQA
-from playwright._impl._errors import TimeoutError  # NOQA
+from playwright.sync_api._generated import ElementHandle
 
 from ..constants import (
     SGCC_TIMEOUT,
