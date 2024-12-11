@@ -32,13 +32,27 @@ class AcquisitionService:
         login_util(self._page, self._username, self._password)
 
     def get_residents(self) -> List[Resident]:
+        """
+        get the bound residents of login account
+        """
         return get_residents_util(self._page)
 
     def get_balance(self) -> List[Balance]:
+        """
+        get current balance of each bound resident
+        """
         return get_balance_util(self._page)
 
     def get_daily_usage_history(self) -> List[Usage]:
+        """
+        get daily usage for each bound resident
+        within recent 30 days
+        """
         return get_daily_usage_history_util(self._page)
 
     def get_monthly_usage_history(self) -> List[Usage]:
+        """
+        get monthly usage and charge for each bound resident
+        within recent 3 years
+        """
         return get_monthly_usage_history_util(self._page)
