@@ -2,6 +2,7 @@
 Constants
 """
 from enum import Enum
+import re
 
 
 # ############################################
@@ -143,3 +144,18 @@ CANNY_UPPER_THRESHOLD = 100
 CV_BINARY_THRESH = 45.0
 CV_BINARY_MAXVAL = 255.0
 CV_KERNAL_SIZE = 4
+
+
+# ##########
+#  Database
+# ##########
+DATABASE_INIT_RETRY_LIMIT = 3
+
+
+# #################
+#  Settings object
+# #################
+ENVIRONMENT_VARIABLE = 'SGCC_SETTINGS_MODULE'
+DEFAULT_SETTINGS_MODULE = 'settings'
+SETTING_KEY_MAX_LENGTH = 100
+SETTING_KEY_MATCH = re.compile(r'^[a-zA-Z0-9_-]+$').match
