@@ -2,6 +2,7 @@
 Database session
 """
 from contextlib import contextmanager
+import pathlib
 import time
 
 from sqlalchemy import create_engine
@@ -9,11 +10,18 @@ from sqlalchemy.exc import DatabaseError
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from .models import BaseModel
+from ..conf import settings
 from ..constants import DATABASE_INIT_RETRY_LIMIT
 
 
 def get_engine():
-    return create_engine('sqlite:///app.db')
+    db_conf = settings.DATABASES['default']
+    if db_conf.get('ENGINE') != 'sqlite':
+        raise NotImplementedError
+
+    db_path = db_conf['NAME']
+    db_path_obj = pathlib.Path(db_path)
+    return create_engine(f'sqlite:///{str(db_path_obj.resolve())}')
 
 
 def get_session():
