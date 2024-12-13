@@ -7,7 +7,10 @@ from typing import List
 from playwright.sync_api import Page
 from playwright.sync_api._generated import ElementHandle
 
+from .common import load_locator
+from ..common import get_ordinal_suffix, retry
 from ..constants import (
+    SGCC_RETRY_LIMIT,
     SGCC_TIMEOUT,
     SGCC_WEB_URL_DOOR_NUMBER_MANAGER,
     SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV
@@ -22,25 +25,38 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_residents']
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def get_residents(page: Page) -> List[Resident]:
     """
     get the bound residents of login account
     """
+    logger.info('start to get residents data')
     page.goto(url=SGCC_WEB_URL_DOOR_NUMBER_MANAGER, timeout=SGCC_TIMEOUT)
 
     door_info_div_locator = page.locator(
         f'xpath={SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV}'
     )
-    door_info_div_locator.wait_for(state='attached', timeout=SGCC_TIMEOUT)
+    load_locator(door_info_div_locator, state='attached')
 
     result: List[Resident] = []
-    for section_dom in door_info_div_locator.locator('section').element_handles():
+    for idx, section_dom in enumerate(door_info_div_locator.locator('section').element_handles()):
+        logger.info(
+            f'try to get {idx + 1}{get_ordinal_suffix(idx + 1)} resident data'
+        )
         item = _parse_resident_section(section_dom)
         result.append(item)
 
+    logger.info('get residents data succeed')
     return result
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def _parse_resident_section(section_dom: ElementHandle) -> Resident:
     developer_span_dom: ElementHandle
     is_main_door_span_dom: ElementHandle

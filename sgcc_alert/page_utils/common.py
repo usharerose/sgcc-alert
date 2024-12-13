@@ -1,12 +1,22 @@
 """
 Common utilities
 """
-from typing import List
+import logging
+from typing import List, Optional, Literal
 
-from playwright.sync_api import Page
+from playwright.sync_api import Locator, Page
 from playwright.sync_api._generated import ElementHandle
+from playwright._impl._errors import TimeoutError
 
-from ..constants import SGCC_TIMEOUT
+from ..constants import (
+    SGCC_PAGE_VISITING_INTERVAL,
+    SGCC_LOAD_DOM_RETRY_LIMIT,
+    SGCC_TIMEOUT_LOAD_PAGE
+)
+from ..common import retry
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_sgcc_dropdown_lis(
@@ -25,23 +35,25 @@ def get_sgcc_dropdown_lis(
     :return: List[ElementHandle]
     """
     button_locator = page.locator(button_selector)
-    button_locator.wait_for(state='visible', timeout=SGCC_TIMEOUT)
+    load_locator(button_locator)
     button_locator.click()
+    page.wait_for_timeout(SGCC_PAGE_VISITING_INTERVAL)
 
     dropdown_locator = page.locator(dropdown_selector)
-    dropdown_locator.wait_for(state='visible', timeout=SGCC_TIMEOUT)
+    load_locator(dropdown_locator)
     list_item_locator = dropdown_locator.locator('li')
     return [item for item in list_item_locator.element_handles()]
 
 
-def get_ordinal_suffix(value: int) -> str:
-    if 10 <= value % 100 <= 20:
-        return 'th'
-    units_digit = value % 10
-    if units_digit == 1:
-        return 'st'
-    if units_digit == 2:
-        return 'nd'
-    if units_digit == 3:
-        return 'rd'
-    return 'th'
+@retry(
+    retry_limit=SGCC_LOAD_DOM_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
+def load_locator(
+    locator: Locator,
+    state: Optional[
+        Literal['attached', 'detached', 'hidden', 'visible']
+    ] = 'visible',
+    timeout: Optional[float] = SGCC_TIMEOUT_LOAD_PAGE
+) -> None:
+    locator.wait_for(state=state, timeout=timeout)

@@ -8,14 +8,13 @@ from typing import List
 from playwright.sync_api import Page
 from playwright._impl._errors import TimeoutError
 
-from .common import (
-    get_ordinal_suffix,
-    get_sgcc_dropdown_lis
-)
+from .common import get_sgcc_dropdown_lis, load_locator
+from ..common import get_ordinal_suffix, retry
 from ..constants import (
     DateGranularity,
     DATE_FORMAT,
     ERR_MSG_TML_OVERFLOW,
+    SGCC_RETRY_LIMIT,
     SGCC_TIMEOUT,
     SGCC_TIMEOUT_LOAD_PAGE,
     SGCC_WEB_URL_USAGE_HIST,
@@ -35,11 +34,16 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_daily_usage_history']
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def get_daily_usage_history(page: Page) -> List[Usage]:
     """
     get daily usage for each bound resident
     within recent 30 days
     """
+    logger.info('start to get daily usage data')
     page.goto(url=SGCC_WEB_URL_USAGE_HIST, timeout=SGCC_TIMEOUT)
 
     resident_options = get_sgcc_dropdown_lis(
@@ -51,23 +55,24 @@ def get_daily_usage_history(page: Page) -> List[Usage]:
 
     result: List[Usage] = []
     for idx in range(avail_resident_amounts):
-        try:
-            usages = _get_single_resident_daily_usage_history(
-                page,
-                idx
-            )
-        except TimeoutError:
-            logger.error((
-                f'TimeoutError when get {idx + 1}{get_ordinal_suffix(idx + 1)} '
-                f'resident\'s daily usage history'
-            ))
-            continue
-
+        logger.info(
+            f'try to get {idx + 1}{get_ordinal_suffix(idx + 1)} '
+            f'resident daily usage data'
+        )
+        usages = _get_single_resident_daily_usage_history(
+            page,
+            idx
+        )
         result.extend(usages)
 
+    logger.info('get daily usage data succeed')
     return result
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def _get_single_resident_daily_usage_history(
     page: Page,
     resident_idx: int
@@ -104,27 +109,27 @@ def _get_single_resident_daily_usage_history(
     daily_tab_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_DAILY_TAB_DIV}'
     )
-    daily_tab_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(daily_tab_locator)
     daily_tab_locator.click()
     page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
 
     recent_thirty_days_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_DAILY_RECENT_THIRTY_DAYS_CHECKBOX_SPAN}'
     )
-    recent_thirty_days_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(recent_thirty_days_locator)
     recent_thirty_days_locator.click()
     page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
 
     resident_id_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_RESIDENT_ID_SPAN}'
     )
-    resident_id_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(resident_id_locator)
     resident_id = int(resident_id_locator.inner_text().strip())
 
     tbody_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_DAILY_DETAILED_TBODY}'
     )
-    tbody_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(tbody_locator)
     tr_locator = tbody_locator.locator('> tr')
 
     data: List[Usage] = []

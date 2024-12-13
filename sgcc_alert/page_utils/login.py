@@ -7,7 +7,10 @@ import time
 from typing import List, Tuple
 
 from playwright.sync_api import Page
+from playwright._impl._errors import TimeoutError
 
+from .common import load_locator
+from ..common import retry
 from ..constants import (
     ERR_MSG_CAPTCHA_WRONG,
     ERR_MSG_REACH_LOGIN_LIMIT,
@@ -48,58 +51,59 @@ logger = logging.getLogger(__name__)
 __all__ = ['login']
 
 
+@retry(
+    retry_limit=SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT,
+    exceptions=(CaptchaValidationError, TimeoutError)
+)
 def login(page: Page, username: str, password: str) -> None:
+    """
+    1. visit login page
+    2.
+    """
+    logger.info('start to login')
     page.goto(url=SGCC_WEB_URL_LOGIN, timeout=SGCC_TIMEOUT)
 
     login_by_account_button_locator = page.locator(
         f'xpath={SGCC_XPATH_LOGIN_BY_ACCOUNT_BUTTON}'
     )
-    login_by_account_button_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(login_by_account_button_locator)
     login_by_account_button_locator.click()
+    page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
 
     username_form_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_USERNAME_INPUT}')
-    username_form_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(username_form_locator)
     username_form_locator.fill(username)
     pwd_form_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_PASSWORD_INPUT}')
-    pwd_form_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(pwd_form_locator)
     pwd_form_locator.fill(password)
 
     tos_checkbox_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_AGREE_TOS_CHECKBOX}')
-    tos_checkbox_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(tos_checkbox_locator)
     tos_checkbox_locator.click()
 
     login_button_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_BUTTON}')
-    login_button_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(login_button_locator)
     login_button_locator.click()
     # captcha image loading costs much more time
     page.wait_for_timeout(SGCC_TIMEOUT_LOAD_CAPTCHA)
 
-    _verify_slide_captcha_with_retry(page)
+    _verify_slide_captcha(page)
+    logger.info('login succeed')
 
 
-def _verify_slide_captcha_with_retry(page: Page) -> None:
-    retries = 0
-    while True:
-        try:
-            _verify_slide_captcha(page)
-        except CaptchaValidationError:
-            if retries < SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT:
-                time.sleep(1)
-                retries += 1
-            else:
-                break
-        except (LoginRateLimitError, LoginAccountPasswordError, LoginError):
-            raise
-        else:
-            break
-
-
+@retry(
+    retry_limit=SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT,
+    exceptions=(CaptchaValidationError,)
+)
 def _verify_slide_captcha(page: Page) -> None:
     x_ordinate, _ = _identify_notch_ordinate(page)
 
     # when x_ordinate is equal to 0, it means no effective identification
     retries = 0
     while x_ordinate == 0 and retries < SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT:
+        logger.warning(
+            f'Retrying identify captcha notch {retries} / {SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT}'
+        )
         _refresh_captcha(page)
         x_ordinate, _ = _identify_notch_ordinate(page)
         retries += 1
@@ -130,7 +134,7 @@ def _refresh_captcha(page: Page) -> None:
     refresh_button_locator = page.locator(
         f'xpath={SGCC_XPATH_LOGIN_CAPTCHA_REFRESH_BUTTON}'
     )
-    refresh_button_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(refresh_button_locator)
     refresh_button_locator.click()
     page.wait_for_timeout(SGCC_TIMEOUT_LOAD_CAPTCHA)
 
@@ -167,7 +171,7 @@ def _slide_block(page: Page, x_offset: float) -> None:
     slide_button_locator = page.locator(
         f'xpath={SGCC_XPATH_LOGIN_CAPTCHA_SLIDE_BUTTON}'
     )
-    slide_button_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(slide_button_locator)
 
     slide_button_box = slide_button_locator.bounding_box()
     assert slide_button_box is not None

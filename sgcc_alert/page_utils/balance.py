@@ -6,15 +6,15 @@ import logging
 from typing import List
 
 from playwright.sync_api import Page
+from playwright._impl._errors import TimeoutError
 
-from .common import (
-    get_ordinal_suffix,
-    get_sgcc_dropdown_lis
-)
+from .common import get_sgcc_dropdown_lis, load_locator
+from ..common import get_ordinal_suffix, retry
 from ..constants import (
     DateGranularity,
     DATETIME_FORMAT,
     ERR_MSG_TML_OVERFLOW,
+    SGCC_RETRY_LIMIT,
     SGCC_TIMEOUT,
     SGCC_TIMEOUT_LOAD_PAGE,
     SGCC_WEB_URL_BALANCE,
@@ -32,10 +32,15 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_balance']
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def get_balance(page: Page) -> List[Balance]:
     """
     get current balance of each bound resident
     """
+    logger.info('start to get balance data')
     page.goto(url=SGCC_WEB_URL_BALANCE, timeout=SGCC_TIMEOUT)
 
     resident_options = get_sgcc_dropdown_lis(
@@ -47,12 +52,20 @@ def get_balance(page: Page) -> List[Balance]:
 
     result: List[Balance] = []
     for idx in range(avail_resident_amounts):
+        logger.info(
+            f'try to get {idx + 1}{get_ordinal_suffix(idx + 1)} resident balance data'
+        )
         data = _get_single_resident_balance(page, idx)
         result.append(data)
 
+    logger.info('get balance data succeed')
     return result
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def _get_single_resident_balance(
     page: Page,
     resident_idx: int
@@ -89,14 +102,16 @@ def _get_single_resident_balance(
     resident_id_locator = page.locator(
         f'xpath={SGCC_XPATH_BALANCE_RESIDENT_ID_SPAN}'
     )
-    resident_id_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(resident_id_locator)
     resident_id = int(resident_id_locator.inner_text().strip())
 
     detailed_div_locator = page.locator(
         f'xpath={SGCC_XPATH_BALANCE_DETAILED_DIV}'
     )
-    detailed_div_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
-    date_div_dom, balance_div_dom = detailed_div_locator.locator('> div').element_handles()
+    load_locator(detailed_div_locator)
+    date_div_dom, balance_div_dom = detailed_div_locator.locator(
+        '> div'
+    ).element_handles()
 
     _, date_span_dom = date_div_dom.query_selector_all('> span')
     datetime_string = date_span_dom.inner_text().strip()

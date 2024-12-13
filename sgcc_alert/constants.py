@@ -18,7 +18,10 @@ SGCC_WEB_URL_USAGE_HIST = 'https://www.95598.cn/osgweb/electricityCharge'
 # ###################################################
 #  'State Grid Corporation of China' HTTP parameters
 # ###################################################
-SGCC_TIMEOUT = 10 * 1000  # millisecond
+SGCC_LOAD_DOM_RETRY_LIMIT = 5
+SGCC_RETRY_LIMIT = 3
+SGCC_PAGE_VISITING_INTERVAL = 1 * 1000  # millisecond
+SGCC_TIMEOUT = 10 * 1000
 SGCC_TIMEOUT_LOAD_CAPTCHA = 8 * 1000
 SGCC_TIMEOUT_LOAD_PAGE = 3 * 1000
 
