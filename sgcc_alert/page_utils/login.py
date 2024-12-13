@@ -3,7 +3,6 @@ Utilities on login
 """
 import logging
 import random
-import time
 from typing import List, Tuple
 
 from playwright.sync_api import Page

@@ -25,6 +25,7 @@ from ..constants import (
     SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN,
     SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN_BUTTON
 )
+from ..exceptions import LoadTableTimeoutError
 from ..schemes import Usage
 
 
@@ -59,11 +60,17 @@ def get_daily_usage_history(page: Page) -> List[Usage]:
             f'try to get {idx + 1}{get_ordinal_suffix(idx + 1)} '
             f'resident daily usage data'
         )
-        usages = _get_single_resident_daily_usage_history(
-            page,
-            idx
-        )
-        result.extend(usages)
+        try:
+            usages = _get_single_resident_daily_usage_history(
+                page,
+                idx
+            )
+            result.extend(usages)
+        except LoadTableTimeoutError:
+            logger.warning(
+                f'No available daily usage data '
+                f'for {idx + 1}{get_ordinal_suffix(idx + 1)} resident'
+            )
 
     logger.info('get daily usage data succeed')
     return result
@@ -71,7 +78,7 @@ def get_daily_usage_history(page: Page) -> List[Usage]:
 
 @retry(
     retry_limit=SGCC_RETRY_LIMIT,
-    exceptions=(TimeoutError,)
+    exceptions=(LoadTableTimeoutError, TimeoutError)
 )
 def _get_single_resident_daily_usage_history(
     page: Page,
@@ -129,7 +136,10 @@ def _get_single_resident_daily_usage_history(
     tbody_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_DAILY_DETAILED_TBODY}'
     )
-    load_locator(tbody_locator)
+    try:
+        load_locator(tbody_locator)
+    except TimeoutError:
+        raise LoadTableTimeoutError()
     tr_locator = tbody_locator.locator('> tr')
 
     data: List[Usage] = []

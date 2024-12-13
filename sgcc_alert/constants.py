@@ -126,6 +126,7 @@ ERR_MSG_TML_OVERFLOW = ((
 ERR_MSG_WRONG_ACCOUNT_PWD = '账号或密码错误，如连续错误5次，账号将被锁定20分钟，20分钟后自动解锁。'
 ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
+ERR_MSG_LOAD_DATA_TABLE_TIMEOUT = 'Load data timeout, there could be no data'
 
 
 SGCC_SCRIPT_TPL_IMG_ENCODE = '''

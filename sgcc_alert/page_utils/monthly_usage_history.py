@@ -28,6 +28,7 @@ from ..constants import (
     SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN,
     SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN_BUTTON
 )
+from ..exceptions import LoadTableTimeoutError
 from ..schemes import Usage
 
 
@@ -72,12 +73,19 @@ def get_monthly_usage_history(page: Page) -> List[Usage]:
                 f'{year_idx + 1}{get_ordinal_suffix(year_idx + 1)} year\'s '
                 f'monthly usage data'
             )
-            usages = _get_single_resident_monthly_usage_history(
-                page,
-                resident_idx,
-                year_idx
-            )
-            result.extend(usages)
+            try:
+                usages = _get_single_resident_monthly_usage_history(
+                    page,
+                    resident_idx,
+                    year_idx
+                )
+                result.extend(usages)
+            except LoadTableTimeoutError:
+                logger.warning(
+                    f'No available monthly usage data for '
+                    f'{resident_idx + 1}{get_ordinal_suffix(resident_idx + 1)} resident in '
+                    f'{year_idx + 1}{get_ordinal_suffix(year_idx + 1)} year'
+                )
 
     logger.info('get monthly usage data succeed')
     return result
@@ -155,7 +163,10 @@ def _get_single_resident_monthly_usage_history(
     tbody_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_MONTHLY_DETAILED_TBODY}'
     )
-    load_locator(tbody_locator)
+    try:
+        load_locator(tbody_locator)
+    except TimeoutError:
+        raise LoadTableTimeoutError()
     tr_locator = tbody_locator.locator('> tr')
 
     data: List[Usage] = []
