@@ -8,14 +8,13 @@ from typing import List
 from playwright.sync_api import Page
 from playwright._impl._errors import TimeoutError
 
-from .common import (
-    get_ordinal_suffix,
-    get_sgcc_dropdown_lis
-)
+from .common import get_sgcc_dropdown_lis, load_locator
+from ..common import get_ordinal_suffix, retry
 from ..constants import (
     DateGranularity,
     DATE_FORMAT,
     ERR_MSG_TML_OVERFLOW,
+    SGCC_RETRY_LIMIT,
     SGCC_TIMEOUT,
     SGCC_TIMEOUT_LOAD_PAGE,
     SGCC_WEB_URL_USAGE_HIST,
@@ -29,6 +28,7 @@ from ..constants import (
     SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN,
     SGCC_XPATH_USAGE_HIST_YEAR_DROPDOWN_BUTTON
 )
+from ..exceptions import LoadTableTimeoutError
 from ..schemes import Usage
 
 
@@ -38,11 +38,16 @@ logger = logging.getLogger(__name__)
 __all__ = ['get_monthly_usage_history']
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def get_monthly_usage_history(page: Page) -> List[Usage]:
     """
     get monthly usage and charge for each bound resident
     within recent 3 years
     """
+    logger.info('start to get monthly usage data')
     page.goto(url=SGCC_WEB_URL_USAGE_HIST, timeout=SGCC_TIMEOUT)
 
     resident_options = get_sgcc_dropdown_lis(
@@ -62,25 +67,34 @@ def get_monthly_usage_history(page: Page) -> List[Usage]:
     result: List[Usage] = []
     for resident_idx in range(avail_resident_amounts):
         for year_idx in range(avail_year_amounts):
+            logger.info(
+                f'try to get '
+                f'{resident_idx + 1}{get_ordinal_suffix(resident_idx + 1)} resident of '
+                f'{year_idx + 1}{get_ordinal_suffix(year_idx + 1)} year\'s '
+                f'monthly usage data'
+            )
             try:
                 usages = _get_single_resident_monthly_usage_history(
                     page,
                     resident_idx,
                     year_idx
                 )
-            except TimeoutError:
-                logger.error((
-                    f'TimeoutError when get {resident_idx + 1}{get_ordinal_suffix(resident_idx + 1)} '
-                    f'resident\'s {year_idx + 1}{get_ordinal_suffix(year_idx + 1)} year\'s '
-                    f'monthly usage history'
-                ))
-                continue
+                result.extend(usages)
+            except LoadTableTimeoutError:
+                logger.warning(
+                    f'No available monthly usage data for '
+                    f'{resident_idx + 1}{get_ordinal_suffix(resident_idx + 1)} resident in '
+                    f'{year_idx + 1}{get_ordinal_suffix(year_idx + 1)} year'
+                )
 
-            result.extend(usages)
-
+    logger.info('get monthly usage data succeed')
     return result
 
 
+@retry(
+    retry_limit=SGCC_RETRY_LIMIT,
+    exceptions=(TimeoutError,)
+)
 def _get_single_resident_monthly_usage_history(
     page: Page,
     resident_idx: int,
@@ -118,7 +132,7 @@ def _get_single_resident_monthly_usage_history(
     monthly_tab_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_MONTHLY_TAB_DIV}'
     )
-    monthly_tab_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(monthly_tab_locator)
     monthly_tab_locator.click()
     page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
 
@@ -143,13 +157,16 @@ def _get_single_resident_monthly_usage_history(
     resident_id_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_RESIDENT_ID_SPAN}'
     )
-    resident_id_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    load_locator(resident_id_locator)
     resident_id = int(resident_id_locator.inner_text().strip())
 
     tbody_locator = page.locator(
         f'xpath={SGCC_XPATH_USAGE_HIST_MONTHLY_DETAILED_TBODY}'
     )
-    tbody_locator.wait_for(timeout=SGCC_TIMEOUT, state='visible')
+    try:
+        load_locator(tbody_locator)
+    except TimeoutError:
+        raise LoadTableTimeoutError()
     tr_locator = tbody_locator.locator('> tr')
 
     data: List[Usage] = []
