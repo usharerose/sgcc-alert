@@ -11,7 +11,7 @@ from .page_utils import (
     get_daily_usage_history as get_daily_usage_history_util,
     get_monthly_usage_history as get_monthly_usage_history_util,
     get_residents as get_residents_util,
-    login as login_util
+    SGCCLoginService
 )
 
 
@@ -29,7 +29,8 @@ class AcquisitionService:
         self._login()
 
     def _login(self) -> None:
-        login_util(self._page, self._username, self._password)
+        login_service = SGCCLoginService(self._username, self._password, self._page)
+        login_service.login()
 
     def get_residents(self) -> List[Resident]:
         """

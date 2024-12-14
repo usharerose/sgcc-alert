@@ -8,6 +8,7 @@ import re
 # ############################################
 #  'State Grid Corporation of China' Web URLs
 # ############################################
+SGCC_WEB_URL_ACCOUNT_INFO = 'https://www.95598.cn/osgweb/userInfo'
 SGCC_WEB_URL_BALANCE = 'https://www.95598.cn/osgweb/userAcc'
 SGCC_WEB_URL_DOOR_NUMBER_MANAGER = 'https://www.95598.cn/osgweb/doorNumberManeger'
 SGCC_WEB_URL_LOGIN = 'https://www.95598.cn/osgweb/login'
@@ -32,6 +33,10 @@ SGCC_TIMEOUT_LOAD_PAGE = 3 * 1000
 SGCC_SELECTOR_LOGIN_CAPTCHA_BG_IMG = '#slideVerify > canvas:nth-child(1)'
 SGCC_SELECTOR_LOGIN_CAPTCHA_BLOCK_IMG = '#slideVerify > canvas.slide-verify-block'
 SGCC_SELECTOR_LOGIN_ERR_TIPS_CLASS = '.errmsg-tip'
+SGCC_XPATH_ACCOUNT_USER_INFO_DIV = (
+    '//*[@id="app"]/div/div/article/div/div/div[2]'
+    '/div/div/div[1]/div[2]/div/div/div/div[2]/div[2]'
+)
 SGCC_XPATH_BALANCE_DETAILED_DIV = (
     '//*[@id="app"]/div/div/article/div/div/div[2]/div/div'
     '/div[1]/div[2]/div/div/div/div[2]/div/div[2]/div[1]/div'
