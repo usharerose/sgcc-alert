@@ -2,7 +2,6 @@
 Database schemes used by SQLAlchemy, which store data
 """
 from sqlalchemy import Boolean, Float, Integer, String
-
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

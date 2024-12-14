@@ -9,14 +9,14 @@ from playwright.sync_api._generated import ElementHandle
 
 from .common import load_locator
 from ..common import get_ordinal_suffix, retry
-from ..constants import (
+from ....constants import (
     SGCC_RETRY_LIMIT,
     SGCC_TIMEOUT,
     SGCC_WEB_URL_DOOR_NUMBER_MANAGER,
     SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV
 )
-from ..exceptions import LoadResidentInfoError
-from ..schemes import Resident
+from ....exceptions import LoadResidentInfoError
+from ....schemes import Resident
 
 
 logger = logging.getLogger(__name__)

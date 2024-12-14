@@ -10,7 +10,7 @@ from playwright._impl._errors import TimeoutError
 
 from .common import get_sgcc_dropdown_lis, load_locator
 from ..common import get_ordinal_suffix, retry
-from ..constants import (
+from ....constants import (
     DateGranularity,
     DATETIME_FORMAT,
     ERR_MSG_TML_OVERFLOW,
@@ -23,7 +23,7 @@ from ..constants import (
     SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_BUTTON,
     SGCC_XPATH_BALANCE_RESIDENTS_DROPDOWN_MENU
 )
-from ..schemes import Balance
+from ....schemes import Balance
 
 
 logger = logging.getLogger(__name__)

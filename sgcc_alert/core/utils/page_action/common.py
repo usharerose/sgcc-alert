@@ -8,12 +8,12 @@ from playwright.sync_api import Locator, Page
 from playwright.sync_api._generated import ElementHandle
 from playwright._impl._errors import TimeoutError
 
-from ..constants import (
+from ..common import retry
+from ....constants import (
     SGCC_PAGE_VISITING_INTERVAL,
     SGCC_LOAD_DOM_RETRY_LIMIT,
     SGCC_TIMEOUT_LOAD_PAGE
 )
-from ..common import retry
 
 
 logger = logging.getLogger(__name__)
