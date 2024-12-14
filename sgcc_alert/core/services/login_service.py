@@ -9,9 +9,10 @@ from urllib.parse import urlparse, urlunparse, urlencode
 from playwright.sync_api import Page
 from playwright._impl._errors import TimeoutError
 
-from .common import load_locator
-from ..common import retry
-from ..constants import (
+from .notch_service import NotchService
+from ..utils.common import retry
+from ..utils.page_action.common import load_locator
+from ...constants import (
     ERR_MSG_ACCOUNT_NAME_INVALID,
     ERR_MSG_CAPTCHA_WRONG,
     ERR_MSG_REACH_LOGIN_LIMIT,
@@ -41,13 +42,12 @@ from ..constants import (
     SGCC_XPATH_LOGIN_PASSWORD_INPUT,
     SGCC_XPATH_LOGIN_USERNAME_INPUT
 )
-from ..exceptions import (
+from ...exceptions import (
     CaptchaValidationError,
     LoginAccountPasswordError,
     LoginError,
     LoginRateLimitError
 )
-from ..notch_service import NotchService
 
 
 logger = logging.getLogger(__name__)

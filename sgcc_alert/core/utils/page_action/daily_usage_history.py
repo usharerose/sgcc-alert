@@ -10,7 +10,7 @@ from playwright._impl._errors import TimeoutError
 
 from .common import get_sgcc_dropdown_lis, load_locator
 from ..common import get_ordinal_suffix, retry
-from ..constants import (
+from ....constants import (
     DateGranularity,
     DATE_FORMAT,
     ERR_MSG_TML_OVERFLOW,
@@ -25,8 +25,8 @@ from ..constants import (
     SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN,
     SGCC_XPATH_USAGE_HIST_RESIDENTS_DROPDOWN_BUTTON
 )
-from ..exceptions import LoadTableTimeoutError
-from ..schemes import Usage
+from ....exceptions import LoadTableTimeoutError
+from ....schemes import Usage
 
 
 logger = logging.getLogger(__name__)

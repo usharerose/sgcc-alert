@@ -5,14 +5,14 @@ from typing import List
 
 from playwright.sync_api import Browser
 
-from .schemes import Balance, Resident, Usage
-from .page_utils import (
-    get_balance as get_balance_util,
-    get_daily_usage_history as get_daily_usage_history_util,
-    get_monthly_usage_history as get_monthly_usage_history_util,
-    get_residents as get_residents_util,
-    SGCCLoginService
+from .login_service import SGCCLoginService
+from ..utils.page_action import (
+    get_balance as _get_balance,
+    get_daily_usage_history as _get_daily_usage_history,
+    get_monthly_usage_history as _get_monthly_usage_history,
+    get_residents as _get_residents,
 )
+from ...schemes import Balance, Resident, Usage
 
 
 class AcquisitionService:
@@ -36,24 +36,24 @@ class AcquisitionService:
         """
         get the bound residents of login account
         """
-        return get_residents_util(self._page)
+        return _get_residents(self._page)
 
     def get_balance(self) -> List[Balance]:
         """
         get current balance of each bound resident
         """
-        return get_balance_util(self._page)
+        return _get_balance(self._page)
 
     def get_daily_usage_history(self) -> List[Usage]:
         """
         get daily usage for each bound resident
         within recent 30 days
         """
-        return get_daily_usage_history_util(self._page)
+        return _get_daily_usage_history(self._page)
 
     def get_monthly_usage_history(self) -> List[Usage]:
         """
         get monthly usage and charge for each bound resident
         within recent 3 years
         """
-        return get_monthly_usage_history_util(self._page)
+        return _get_monthly_usage_history(self._page)

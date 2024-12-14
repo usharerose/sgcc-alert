@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from .constants import (
+from ...constants import (
     CANNY_LOWER_THRESHOLD,
     CANNY_UPPER_THRESHOLD,
     CV_BINARY_THRESH,

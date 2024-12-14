@@ -6,8 +6,8 @@ from typing import List
 
 from sqlalchemy import text
 
-from .databases import DimResident, FactBalance, FactUsage, managed_session
-from .schemes import Balance, Resident, Usage
+from ...databases import DimResident, FactBalance, FactUsage, managed_session
+from ...schemes import Balance, Resident, Usage
 
 
 SQL_TML_INSERT_RESIDENTS = f'''

@@ -1,12 +1,10 @@
 """
 Unit test for NotchService
 """
-from http import HTTPStatus
 import json
 from unittest import TestCase
-from unittest.mock import patch
 
-from sgcc_alert.notch_service import NotchService
+from sgcc_alert.core.services.notch_service import NotchService
 
 
 with open('tests/mock_data/captcha_chartreux.json', 'r') as f:

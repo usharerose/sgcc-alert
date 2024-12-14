@@ -3,10 +3,10 @@ Task implementation
 """
 from playwright.sync_api import sync_playwright
 
-from .acquisition_service import AcquisitionService
 from .conf import settings
+from .core.services.acquisition_service import AcquisitionService
 from .databases import prepare_models
-from .load_utils import (
+from .core.utils.load import (
     load_balances,
     load_residents,
     load_usages
