@@ -52,6 +52,7 @@ SGCC_XPATH_DOORNUM_MANAGER_DETAILED_DIV = (
 SGCC_XPATH_LOGIN_AGREE_TOS_CHECKBOX = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[3]/div/span[2]'
 SGCC_XPATH_LOGIN_BUTTON = '//*[@id="login_box"]/div[2]/div[1]/form/div[2]/div/button'
 SGCC_XPATH_LOGIN_BY_ACCOUNT_BUTTON = '//*[@id="login_box"]/div[1]/div[3]'
+SGCC_XPATH_LOGIN_CAPTCHA_DIV = '//*[@id="slideVerify"]'
 SGCC_XPATH_LOGIN_CAPTCHA_REFRESH_BUTTON = '//*[@id="slideVerify"]/div[1]'
 SGCC_XPATH_LOGIN_CAPTCHA_SLIDE_BUTTON = '//*[@id="slideVerify"]/div[2]/div/div'
 SGCC_XPATH_LOGIN_PASSWORD_INPUT = '//*[@id="login_box"]/div[2]/div[1]/form/div[1]/div[2]/div/div/input'
@@ -125,6 +126,7 @@ ERR_MSG_TML_OVERFLOW = ((
 ))
 ERR_MSG_WRONG_ACCOUNT_PWD = '账号或密码错误，如连续错误5次，账号将被锁定20分钟，20分钟后自动解锁。'
 ERR_MSG_REACH_LOGIN_LIMIT = '网络连接超时（RK001）,请重试！'
+ERR_MSG_ACCOUNT_NAME_INVALID = '请输入正确的用户名'
 ERR_MSG_CAPTCHA_WRONG = '验证错误！'
 ERR_MSG_LOAD_DATA_TABLE_TIMEOUT = 'Load data timeout, there could be no data'
 
@@ -136,6 +138,19 @@ SGCC_SCRIPT_TPL_IMG_ENCODE = '''
         return bgImgCanvas.toDataURL('image/png');
       }}
       return null;
+    }}
+'''
+SGCC_SCRIPT_TML_WAIT_CAPTCHA_CANVAS = '''
+    () => {{
+      const bgImgCanvas = document.querySelector('{selector}');
+      if (!bgImgCanvas) {{
+        return false;
+      }}
+      const context = bgImgCanvas.getContext('2d');
+      const imgWidth = bgImgCanvas.width;
+      const imgHeight = bgImgCanvas.height;
+      const imageData = context.getImageData(0, 0, imgWidth, imgHeight);
+      return imageData.data.some((value) => value !== 0);
     }}
 '''
 

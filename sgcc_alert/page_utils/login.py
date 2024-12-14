@@ -11,6 +11,7 @@ from playwright._impl._errors import TimeoutError
 from .common import load_locator
 from ..common import retry
 from ..constants import (
+    ERR_MSG_ACCOUNT_NAME_INVALID,
     ERR_MSG_CAPTCHA_WRONG,
     ERR_MSG_REACH_LOGIN_LIMIT,
     ERR_MSG_WRONG_ACCOUNT_PWD,
@@ -20,16 +21,19 @@ from ..constants import (
     SGCC_LOGIN_CAPTCHA_SLIDE_X_OFFSET_FACTOR,
     SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT,
     SGCC_SCRIPT_TPL_IMG_ENCODE,
+    SGCC_SCRIPT_TML_WAIT_CAPTCHA_CANVAS,
     SGCC_SELECTOR_LOGIN_CAPTCHA_BG_IMG,
     SGCC_SELECTOR_LOGIN_CAPTCHA_BLOCK_IMG,
     SGCC_TIMEOUT,
     SGCC_TIMEOUT_LOAD_CAPTCHA,
     SGCC_TIMEOUT_LOAD_PAGE,
+    SGCC_PAGE_VISITING_INTERVAL,
     SGCC_WEB_URL_LOGIN,
     SGCC_SELECTOR_LOGIN_ERR_TIPS_CLASS,
     SGCC_XPATH_LOGIN_AGREE_TOS_CHECKBOX,
     SGCC_XPATH_LOGIN_BUTTON,
     SGCC_XPATH_LOGIN_BY_ACCOUNT_BUTTON,
+    SGCC_XPATH_LOGIN_CAPTCHA_DIV,
     SGCC_XPATH_LOGIN_CAPTCHA_REFRESH_BUTTON,
     SGCC_XPATH_LOGIN_CAPTCHA_SLIDE_BUTTON,
     SGCC_XPATH_LOGIN_PASSWORD_INPUT,
@@ -57,44 +61,84 @@ __all__ = ['login']
 def login(page: Page, username: str, password: str) -> None:
     """
     1. visit login page
-    2.
+    2. switch to username-password mode
+    3. fill username and password, clicking agree term of service
+    4. click login button, and break if
+       * no captcha visible, and there is error tips reminding that username invalid
     """
     logger.info('start to login')
     page.goto(url=SGCC_WEB_URL_LOGIN, timeout=SGCC_TIMEOUT)
 
+    _fill_login_form(page, username, password)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
+
+    _popup_captcha_with_clicking_login(page, username)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
+
+    _verify_slide_captcha(page)
+    logger.info('login succeed')
+
+
+def _fill_login_form(page: Page, username: str, password: str) -> None:
     login_by_account_button_locator = page.locator(
         f'xpath={SGCC_XPATH_LOGIN_BY_ACCOUNT_BUTTON}'
     )
     load_locator(login_by_account_button_locator)
     login_by_account_button_locator.click()
-    page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
 
     username_form_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_USERNAME_INPUT}')
     load_locator(username_form_locator)
     username_form_locator.fill(username)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
     pwd_form_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_PASSWORD_INPUT}')
     load_locator(pwd_form_locator)
     pwd_form_locator.fill(password)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
 
     tos_checkbox_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_AGREE_TOS_CHECKBOX}')
     load_locator(tos_checkbox_locator)
     tos_checkbox_locator.click()
 
+
+def _popup_captcha_with_clicking_login(page: Page, username: str) -> None:
     login_button_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_BUTTON}')
     load_locator(login_button_locator)
     login_button_locator.click()
-    # captcha image loading costs much more time
-    page.wait_for_timeout(SGCC_TIMEOUT_LOAD_CAPTCHA)
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
 
-    _verify_slide_captcha(page)
-    logger.info('login succeed')
+    _load_captcha(page, username)
+
+
+def _load_captcha(page: Page, username: str) -> None:
+    """
+    check the captcha division and canvas visibility
+    if username was invalid, there could be no captcha division
+    """
+    try:
+        captcha_div_locator = page.locator(f'xpath={SGCC_XPATH_LOGIN_CAPTCHA_DIV}')
+        captcha_div_locator.wait_for(timeout=SGCC_TIMEOUT_LOAD_PAGE)
+    except TimeoutError:
+        err_tip_div = page.locator(SGCC_SELECTOR_LOGIN_ERR_TIPS_CLASS)
+        if err_tip_div.is_visible():
+            err_msg = err_tip_div.locator('span').text_content()
+            if err_msg == ERR_MSG_ACCOUNT_NAME_INVALID:
+                raise LoginError(f'{ERR_MSG_ACCOUNT_NAME_INVALID}: {username}')
+        raise
+
+    page.wait_for_function(
+        SGCC_SCRIPT_TML_WAIT_CAPTCHA_CANVAS.format(
+            selector=SGCC_SELECTOR_LOGIN_CAPTCHA_BG_IMG
+        ),
+        timeout=SGCC_TIMEOUT_LOAD_CAPTCHA
+    )
 
 
 @retry(
     retry_limit=SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT,
     exceptions=(CaptchaValidationError,)
 )
-def _verify_slide_captcha(page: Page) -> None:
+def _verify_slide_captcha(page: Page, username: str) -> None:
     x_ordinate, _ = _identify_notch_ordinate(page)
 
     # when x_ordinate is equal to 0, it means no effective identification
@@ -103,17 +147,29 @@ def _verify_slide_captcha(page: Page) -> None:
         logger.warning(
             f'Retrying identify captcha notch {retries} / {SGCC_LOGIN_CAPTCHA_REFRESH_RETRY_LIMIT}'
         )
-        _refresh_captcha(page)
+        # choose re-click login button instead of clicking captcha refresh button
+        # since the DOM of captcha canvas are always there
+        # even though the new round image hasn't loaded,
+        # which makes the judgement of successful loading difficult by wait for DOM visible
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
+        _popup_captcha_with_clicking_login(page, username)
+
         x_ordinate, _ = _identify_notch_ordinate(page)
         retries += 1
+        page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
 
     # raise without attempt to save daily login times limit
     if x_ordinate == 0:
         raise CaptchaValidationError()
 
+    page.wait_for_timeout(timeout=SGCC_PAGE_VISITING_INTERVAL)
+
     # the factor on x_offset is from experience
     # which makes the slide block being in place
     _slide_block(page, x_ordinate * SGCC_LOGIN_CAPTCHA_SLIDE_X_OFFSET_FACTOR)
+
+    page.wait_for_timeout(timeout=SGCC_TIMEOUT_LOAD_PAGE)
 
     err_tip_div = page.locator(SGCC_SELECTOR_LOGIN_ERR_TIPS_CLASS)
     if err_tip_div.is_visible():
@@ -127,15 +183,6 @@ def _verify_slide_captcha(page: Page) -> None:
         raise LoginError(f'Login failed: {err_msg}')
     if page.url == SGCC_WEB_URL_LOGIN:
         raise LoginError('Login failed with unknown error')
-
-
-def _refresh_captcha(page: Page) -> None:
-    refresh_button_locator = page.locator(
-        f'xpath={SGCC_XPATH_LOGIN_CAPTCHA_REFRESH_BUTTON}'
-    )
-    load_locator(refresh_button_locator)
-    refresh_button_locator.click()
-    page.wait_for_timeout(SGCC_TIMEOUT_LOAD_CAPTCHA)
 
 
 def _identify_notch_ordinate(page: Page) -> Tuple[int, int]:
@@ -189,7 +236,6 @@ def _slide_block(page: Page, x_offset: float) -> None:
         page.mouse.move(sub_dest_x, sub_dest_y)
 
     page.mouse.up()
-    page.wait_for_timeout(SGCC_TIMEOUT_LOAD_PAGE)
 
 
 def simulate_horizontal_move_tracks(x_offset: float) -> List[float]:
