@@ -1,6 +1,7 @@
 """
 Task implementation
 """
+import logging
 from playwright.sync_api import sync_playwright
 
 from .conf import settings
@@ -13,11 +14,15 @@ from .core.utils.load import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def collect_sgcc_data():
     """
     collect data by headless browser,
     loading into database
     """
+    logger.info('start to collect SGCC data')
     with sync_playwright() as p:
         browser = p.chromium.launch()
         service = AcquisitionService(
@@ -34,3 +39,4 @@ def collect_sgcc_data():
     load_residents(residents)
     load_balances(balance)
     load_usages(daily_usage + monthly_usage)
+    logger.info('collect SGCC data successfully')
