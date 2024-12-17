@@ -21,6 +21,9 @@ POLL_INTERVAL = 5
 # 24-hour system
 # 'HH:SS' format
 DAILY_CRON_TIME = '06:00'
+# Sync remote data immediately
+# when start the service first time
+SYNC_INITIALIZED = True
 
 
 try:

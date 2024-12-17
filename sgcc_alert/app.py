@@ -33,11 +33,12 @@ def run() -> None:
 
     _schedule_tasks()
 
-    logger.info('start to run all jobs as initialization')
-    jobs = schedule.get_jobs()
-    for job in jobs:
-        job.run()
-    logger.info('finish running all jobs as initialization')
+    if settings.SYNC_INITIALIZED:
+        logger.info('start to run all jobs as initialization')
+        jobs = schedule.get_jobs()
+        for job in jobs:
+            job.run()
+        logger.info('finish running all jobs as initialization')
 
     thread = threading.Thread(target=_poll_tasks)
     thread.daemon = True
