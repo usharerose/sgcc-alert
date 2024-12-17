@@ -8,6 +8,14 @@ services:
 
   sgcc-alert-run:
     image: sgcc-alert:${IMAGE_TAG:-latest}
+    depends_on:
+      - sgcc-alert-homeassistant
     volumes:
       - ./:/app/sgcc-alert/
-    command: ["tail", "-f", "/dev/null"]
+    command: ["python", "-m", "sgcc_alert.app"]
+
+  sgcc-alert-homeassistant:
+    image: homeassistant/home-assistant:stable
+    restart: unless-stopped
+    ports:
+      - "30001:8123"
