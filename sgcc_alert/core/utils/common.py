@@ -38,6 +38,7 @@ def retry(
                 except exceptions as e:
                     retries += 1
                     if retries >= retry_limit:
+                        logger.exception(e)
                         raise
                     logger.warning(
                         f'Retrying {func.__name__} {retries} / {retry_limit} '

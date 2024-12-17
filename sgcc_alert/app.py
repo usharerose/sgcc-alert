@@ -2,67 +2,34 @@
 Application
 """
 import logging
-import os
-import signal
-import sys
-import threading
-import time
-from types import FrameType
-from typing import Optional
+from typing import Dict
 
-import schedule
+from flask import Flask
 
 from .conf import settings
-from .log import config_logging
-from .tasks import collect_sgcc_data
+from .log import LoggingMiddleware
+from .tracing import TracingMiddleware
 
 
 logger = logging.getLogger(__name__)
 
 
-def run() -> None:
-
-    def _exit(signal_number: int, _frame: Optional[FrameType]) -> None:
-        logger.warning(
-            f'App exits since signal {signal_number} received in process PID {os.getpid()}'
-        )
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, _exit)
-    signal.signal(signal.SIGTERM, _exit)
-
-    _schedule_tasks()
-
-    if settings.SYNC_INITIALIZED:
-        logger.info('start to run all jobs as initialization')
-        jobs = schedule.get_jobs()
-        for job in jobs:
-            job.run()
-        logger.info('finish running all jobs as initialization')
-
-    thread = threading.Thread(target=_poll_tasks)
-    thread.daemon = True
-    thread.start()
-
-    # 保持主线程常驻
-    while True:
-        time.sleep(10)
+def create_app() -> Flask:
+    _app = Flask(__name__)
+    TracingMiddleware.install(_app)
+    LoggingMiddleware.install(_app, 'sgcc-alert', settings.DEBUG)
+    return _app
 
 
-def _schedule_tasks() -> None:
-    schedule.every().day.at(settings.DAILY_CRON_TIME).do(collect_sgcc_data)
+app = create_app()
 
 
-def _poll_tasks() -> None:
-    while True:
-        try:
-            schedule.run_pending()
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            time.sleep(settings.POLL_INTERVAL)
+@app.route('/', methods=['GET'])
+def index() -> Dict:
+    return {
+        'data': 'This is SGCC Alert'
+    }
 
 
 if __name__ == '__main__':
-    config_logging('sgcc-alert', settings.DEBUG)
-    run()
+    app.run()

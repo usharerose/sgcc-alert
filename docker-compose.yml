@@ -12,10 +12,12 @@ services:
       - sgcc-alert-homeassistant
     volumes:
       - ./:/app/sgcc-alert/
-    command: ["python", "-m", "sgcc_alert.app"]
+    ports:
+      - "30001:8000"
+    command: gunicorn -c gunicorn.conf.py sgcc_alert.app:app
 
   sgcc-alert-homeassistant:
     image: homeassistant/home-assistant:stable
     restart: unless-stopped
     ports:
-      - "30001:8123"
+      - "30002:8123"
