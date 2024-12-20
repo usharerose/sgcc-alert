@@ -8,6 +8,16 @@ services:
 
   sgcc-alert-run:
     image: sgcc-alert:${IMAGE_TAG:-latest}
+    depends_on:
+      - sgcc-alert-homeassistant
     volumes:
       - ./:/app/sgcc-alert/
-    command: ["tail", "-f", "/dev/null"]
+    ports:
+      - "30001:8000"
+    command: gunicorn -c gunicorn.conf.py sgcc_alert.app:app
+
+  sgcc-alert-homeassistant:
+    image: homeassistant/home-assistant:stable
+    restart: unless-stopped
+    ports:
+      - "30002:8123"
