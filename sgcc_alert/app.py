@@ -4,9 +4,10 @@ Application
 import logging
 from typing import Dict
 
-from flask import Flask
+from flask import Flask, request
 
 from .conf import settings
+from .core.services.query_service import QueryService
 from .log import LoggingMiddleware
 from .tracing import TracingMiddleware
 
@@ -29,6 +30,18 @@ def index() -> Dict:
     return {
         'data': 'This is SGCC Alert'
     }
+
+
+@app.route('/get-resident', methods=['POST'])
+def get_resident():
+    payload = request.json or {}
+
+    return QueryService.query_resident(
+        payload.get('resident_id'),
+        payload.get('exclude_non_main_resident'),
+        payload.get('order_by'),
+        payload.get('pagination')
+    )
 
 
 if __name__ == '__main__':
