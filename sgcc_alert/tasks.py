@@ -109,7 +109,10 @@ def run() -> None:
 
 
 def _schedule_tasks() -> None:
-    SCHEDULER.every().day.at(settings.DAILY_CRON_TIME).do(collect_sgcc_data)
+    SCHEDULER.every().day.at(
+        settings.DAILY_CRON_TIME,
+        settings.TIMEZONE
+    ).do(collect_sgcc_data)
 
 
 def _poll_tasks() -> None:
