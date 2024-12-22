@@ -65,7 +65,7 @@ def collect_sgcc_data() -> None:
     """
     logger.info('start to collect SGCC data')
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.webkit.launch()
         service = AcquisitionService(
             settings.SGCC_ACCOUNT_USERNAME,
             settings.SGCC_ACCOUNT_PASSWORD,
