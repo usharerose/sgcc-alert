@@ -4,6 +4,9 @@ services:
     build:
       context: .
       target: dev
+      args:
+        APT_SOURCE: "https://mirrors.tuna.tsinghua.edu.cn/debian/"
+        PYPI_URL: "https://pypi.tuna.tsinghua.edu.cn/simple"
     image: sgcc-alert:${IMAGE_TAG:-latest}
 
   sgcc-alert-run:
