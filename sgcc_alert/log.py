@@ -109,7 +109,7 @@ class JsonFormatter(Formatter):
         'levelname',
         'lineno',
         'name',
-        'request_id'
+        'request_id',
         'message'
     )
 
