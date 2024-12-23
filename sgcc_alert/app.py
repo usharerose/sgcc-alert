@@ -8,6 +8,7 @@ from flask import Flask, request
 
 from .conf import settings
 from .core.services.query_service import QueryService
+from .databases.session import prepare_models
 from .log import LoggingMiddleware
 from .tracing import TracingMiddleware
 
@@ -19,6 +20,7 @@ def create_app() -> Flask:
     _app = Flask(__name__)
     TracingMiddleware.install(_app)
     LoggingMiddleware.install(_app, 'sgcc-alert', settings.DEBUG)
+    prepare_models()
     return _app
 
 
