@@ -33,7 +33,7 @@ DEFAULT_LOG_CONFIG_DICT = {
     'formatters': {
         'default': {
             'format': (
-                '%(asctime)s | %(service_name)s | %(process)d | '
+                '%(asctime)s | %(service_name)s | %(process)d | %(thread)d | '
                 '%(levelname)s | +%(lineno)d %(name)s | %(request_id)s '
                 '|> %(message)s'
             ),
