@@ -207,13 +207,13 @@ class LoggingMiddleware(object):
         response_vars = {'status': status}
 
         try:
-            status = int(status)
+            status_val = int(status)
         except ValueError:
             pass
         else:
-            if status >= 500 and status != 501:
+            if status_val >= 500 and status_val != 501:
                 req_method = environ.get('REQUEST_METHOD')
-                if req_method.lower() == 'post':
+                if req_method and req_method.lower() == 'post':
                     response_vars['body'] = request.get_json()
 
         response_str = '%(status)s' % response_vars
