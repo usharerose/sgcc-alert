@@ -2,6 +2,7 @@
 Trace request by ID
 """
 import logging
+from typing import Optional
 import uuid
 
 from flask import Flask, request
@@ -14,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 class RequestIdGenerator(object):
 
-    def __init__(self, init_value: str = None) -> None:
+    def __init__(self, init_value: Optional[str] = None) -> None:
         self._init_value = init_value
-        self._value: str = init_value
+        self._value: Optional[str] = init_value
 
     @property
     def request_id(self) -> str:
-        if not self._value:
+        if self._value is None:
             self._value = uuid.uuid4().hex
         return self._value
 
@@ -34,7 +35,7 @@ class TracingMiddleware(object):
         # install request id
         original_request_id = headers.get(DEFAULT_REQUEST_ID_HEADER)
         request_id = RequestIdGenerator(original_request_id).request_id
-        request.request_id = request_id
+        request.request_id = request_id  # type: ignore[attr-defined]
 
     @classmethod
     def install(cls, app: Flask) -> None:

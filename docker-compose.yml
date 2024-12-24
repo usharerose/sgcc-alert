@@ -4,20 +4,31 @@ services:
     build:
       context: .
       target: dev
+      args:
+        APT_SOURCE: "https://mirrors.tuna.tsinghua.edu.cn/debian/"
     image: sgcc-alert:${IMAGE_TAG:-latest}
 
   sgcc-alert-run:
     image: sgcc-alert:${IMAGE_TAG:-latest}
     depends_on:
+      - sgcc-alert-background-task
       - sgcc-alert-homeassistant
     volumes:
       - ./:/app/sgcc-alert/
+    hostname: sgcc-alert
     ports:
       - "30001:8000"
     command: gunicorn -c gunicorn.conf.py sgcc_alert.app:app
 
+  sgcc-alert-background-task:
+    image: sgcc-alert:${IMAGE_TAG:-latest}
+    volumes:
+      - ./:/app/sgcc-alert/
+    command: python -m sgcc_alert.tasks
+
   sgcc-alert-homeassistant:
     image: homeassistant/home-assistant:stable
     restart: unless-stopped
+    hostname: sgcc-alert-homeassistant
     ports:
       - "30002:8123"

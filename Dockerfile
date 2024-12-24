@@ -1,12 +1,19 @@
+ARG APT_SOURCE="http://deb.debian.org/debian/"
+
 FROM python:3.10-slim AS builder
 
 MAINTAINER Chaojie Yan
 
+ARG APT_SOURCE
+
 # Setup basic Linux packages
-RUN apt update && \
+RUN echo "deb ${APT_SOURCE} stable main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb-src ${APT_SOURCE} stable main contrib non-free" >> /etc/apt/sources.list && \
+    apt update && \
     apt install -y tini tzdata build-essential libffi-dev make && \
     apt clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 # Set workdir
 WORKDIR /app/sgcc-alert/
@@ -30,10 +37,11 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 ENV PYTHONPATH /app/sgcc-alert/
 
 # install dependencies
-RUN python -m pip install --no-cache --upgrade pip && \
+RUN python -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    python -m pip install --no-cache --upgrade pip && \
     python -m pip install --no-cache poetry==${POETRY_VERSION} && \
-    poetry install && \
-    python -m playwright install --with-deps && \
+    poetry update && \
+    python -m playwright install --with-deps chromium && \
     find /usr/local/ -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete
 
 FROM python:3.10-slim AS dev

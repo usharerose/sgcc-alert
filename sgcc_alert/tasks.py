@@ -49,7 +49,7 @@ class SafeScheduler(Scheduler):
     def _run_job(self, job) -> None:
         try:
             super()._run_job(job)
-        except Exception as e:  # NOQA
+        except Exception as e:
             logger.exception(e)
             job.last_run = datetime.datetime.now()
             job._schedule_next_run()
@@ -63,7 +63,6 @@ def collect_sgcc_data() -> None:
     collect data by headless browser,
     loading into database
     """
-    logger.info('start to collect SGCC data')
     with sync_playwright() as p:
         browser = p.chromium.launch()
         service = AcquisitionService(
@@ -80,7 +79,6 @@ def collect_sgcc_data() -> None:
     load_residents(residents)
     load_balances(balance)
     load_usages(daily_usage + monthly_usage)
-    logger.info('collect SGCC data successfully')
 
 
 def run() -> None:
@@ -98,14 +96,13 @@ def run() -> None:
     _schedule_tasks()
 
     if settings.SYNC_INITIALIZED:
-        logger.info('job triggered as initialization')
         init_thread = threading.Thread(target=_serial_run_tasks)
         init_thread.daemon = True
         init_thread.start()
 
-    thread = threading.Thread(target=_poll_tasks)
-    thread.daemon = True
-    thread.start()
+    while True:
+        SCHEDULER.run_pending()
+        time.sleep(settings.POLL_INTERVAL)
 
 
 def _schedule_tasks() -> None:
@@ -115,17 +112,11 @@ def _schedule_tasks() -> None:
     ).do(collect_sgcc_data)
 
 
-def _poll_tasks() -> None:
-    while True:
-        try:
-            SCHEDULER.run_pending()
-        except Exception as e:
-            logger.exception(e)
-        finally:
-            time.sleep(settings.POLL_INTERVAL)
-
-
 def _serial_run_tasks() -> None:
     jobs = SCHEDULER.get_jobs()
     for job in jobs:
         SCHEDULER._run_job(job)
+
+
+if __name__ == '__main__':
+    run()
