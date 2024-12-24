@@ -1,0 +1,47 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+automation sgcc:
+  - alias: "Update resident options"
+    triggers:
+      - trigger: event
+        event_type: homeassistant.start
+      - trigger: time_pattern
+        minutes: "/5"
+    actions:
+      - action: rest_command.get_resident
+        response_variable: get_resident_response
+      - delay: "00:00:05"
+      - action: input_select.set_options
+        target:
+          entity_id: input_select.sgcc_resident
+        data:
+          options: >
+            {%- set ns = namespace(options=[]) -%}
+            {%- for item in get_resident_response['content'] -%}
+              {%- set ns.options = ns.options + [[item['resident_address'], item['resident_id'], ( '主户' if item['is_main'] else '非主户' )] | join(' | ')] -%}
+            {% endfor %}
+            {{ ns.options }}
+
+rest_command:
+  get_resident:
+    url: 'http://sgcc-alert:8000/get-resident'
+    method: 'POST'
+    headers:
+      Content-Type: 'application/json'
+    payload: '{"order_by": [{"item": "resident_id", "order": "desc"}]}'
+
+input_select:
+  sgcc_resident:
+    name: "SGCC Residents"
+    options:
+      - "Loading..."

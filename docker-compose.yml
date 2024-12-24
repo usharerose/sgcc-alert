@@ -30,5 +30,10 @@ services:
     image: homeassistant/home-assistant:stable
     restart: unless-stopped
     hostname: sgcc-alert-homeassistant
+    volumes:
+      - ./homeassistant_config/automations.yaml:/config/automations.yaml
+      - ./homeassistant_config/configuration.yaml:/config/configuration.yaml
+      - ./homeassistant_config/scenes.yaml:/config/scenes.yaml
+      - ./homeassistant_config/scripts.yaml:/config/scripts.yaml
     ports:
       - "30002:8123"
