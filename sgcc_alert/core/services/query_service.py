@@ -6,7 +6,8 @@ from typing import Dict, List, Optional
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query, scoped_session
 
-from ...databases.models import DimResident
+from ...constants import DateGranularity
+from ...databases.models import DimResident, FactBalance
 from ...databases.session import managed_session
 
 
@@ -51,6 +52,37 @@ class QueryService:
             query = query.order_by(*order_args)
         if pagination is not None:
             query = query.limit(pagination['limit']).offset(pagination['offset'])
+
+        columns = [column['name'] for column in query.column_descriptions]
+        result = [dict(zip(columns, item)) for item in query.all()]
+        return result
+
+    @classmethod
+    def query_latest_balance(
+        cls,
+        resident_id: int
+    ):
+        with managed_session() as session:
+            result = cls._query_latest_balance(session, resident_id)
+        return result
+
+    @classmethod
+    def _query_latest_balance(
+        cls,
+        session: scoped_session,
+        resident_id: int
+    ):
+        query: Query = session.query(
+            FactBalance.resident_id,
+            FactBalance.date,
+            FactBalance.balance,
+            FactBalance.est_remain_days,
+        ).filter(
+            FactBalance.resident_id.in_([resident_id]),
+            FactBalance.granularity.in_([DateGranularity.DAILY.value])
+        ).order_by(
+            desc(FactBalance.date)
+        ).limit(1)
 
         columns = [column['name'] for column in query.column_descriptions]
         result = [dict(zip(columns, item)) for item in query.all()]

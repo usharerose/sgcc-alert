@@ -46,5 +46,15 @@ def get_resident():
     )
 
 
+@app.route('/get-latest-balance', methods=['GET'])
+def get_latest_balance():
+    resident_id = request.args.get('resident_id')
+
+    result = QueryService.query_latest_balance(int(resident_id))
+    return {
+        'data': result
+    }
+
+
 if __name__ == '__main__':
     app.run()
