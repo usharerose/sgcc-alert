@@ -32,6 +32,15 @@ automation sgcc:
             {% endfor %}
             {{ ns.options }}
 
+  - alias: "Update SGCC API on Resident Option Changing"
+    trigger:
+      - platform: state
+        entity_id: input_select.sgcc_resident
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.sgcc_latest_balance_api
+
 rest_command:
   get_resident:
     url: 'http://sgcc-alert:8000/get-resident'
@@ -45,3 +54,36 @@ input_select:
     name: "SGCC Residents"
     options:
       - "Loading..."
+
+sensor:
+  - platform: rest
+    name: SGCC Latest Balance API
+    resource: "http://sgcc-alert:8000/get-latest-balance"
+    method: GET
+    params:
+      resident_id: >
+        {%- set select_option = states('input_select.sgcc_resident') -%}
+        {%- set items = select_option.split(' | ') -%}
+        {%- if items | length != 3 -%}
+            {{ '' }}
+        {% else %}
+            {%- set _, resident_id, _ = items -%}
+            {{ resident_id }}
+        {% endif %}
+    value_template: >
+      {%- set select_option = states('input_select.sgcc_resident') -%}
+      {%- set items = select_option.split(' | ') -%}
+      {%- if items | length != 3 -%}
+          {{ {} }}
+      {% else %}
+          {{ value_json.data[0].balance }}
+      {% endif %}
+    json_attributes_path: "$.data[0]"
+    json_attributes:
+      - resident_id
+      - date
+      - balance
+    scan_interval: 3600
+    device_class: monetary
+    state_class: total
+    unit_of_measurement: "CNY"
