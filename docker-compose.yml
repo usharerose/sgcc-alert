@@ -37,3 +37,11 @@ services:
       - ./homeassistant_config/scripts.yaml:/config/scripts.yaml
     ports:
       - "30002:8123"
+
+  sgcc-alert-sqlite:
+    image: keinos/sqlite3:latest
+    volumes:
+      - ./sgcc.sqlite:/workspace/sgcc.sqlite
+    command: tail -f /dev/null
+#    volumes:
+#      - ./sgcc.sqlite:/app/sgcc.sqlite
