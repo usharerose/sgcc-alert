@@ -13,8 +13,8 @@ scene: !include scenes.yaml
 automation sgcc:
   - alias: "Update resident options"
     triggers:
-      - trigger: event
-        event_type: homeassistant.start
+      - trigger: homeassistant
+        event: start
       - trigger: time_pattern
         minutes: "/5"
     actions:
