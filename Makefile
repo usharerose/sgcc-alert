@@ -10,6 +10,10 @@ run: build clean-container
 ssh:
 	docker-compose exec sgcc-alert-run /bin/bash
 
+ssh-db:
+	docker-compose up -d sgcc-alert-sqlite
+	docker-compose exec sgcc-alert-sqlite /bin/sh
+
 lint:
 	python -m flake8 sgcc_alert/
 

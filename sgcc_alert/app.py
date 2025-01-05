@@ -10,6 +10,7 @@ from .conf import settings
 from .core.services.query_service import QueryService
 from .databases.session import prepare_models
 from .log import LoggingMiddleware
+from .routes import API_V1
 from .tracing import TracingMiddleware
 
 
@@ -25,6 +26,9 @@ def create_app() -> Flask:
 
 
 app = create_app()
+
+
+app.register_blueprint(API_V1, url_prefix='/api/v1.0')
 
 
 @app.route('/', methods=['GET'])
