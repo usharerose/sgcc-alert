@@ -18,8 +18,8 @@ automation sgcc:
       - trigger: time_pattern
         minutes: "/5"
     actions:
-      - action: rest_command.get_resident
-        response_variable: get_resident_response
+      - action: rest_command.get_residents
+        response_variable: get_residents_response
       - delay: "00:00:05"
       - action: input_select.set_options
         target:
@@ -27,7 +27,7 @@ automation sgcc:
         data:
           options: >
             {%- set ns = namespace(options=[]) -%}
-            {%- for item in get_resident_response['content'] -%}
+            {%- for item in get_residents_response['content']['data'] -%}
               {%- set ns.options = ns.options + [[item['resident_address'], item['resident_id'], ( '主户' if item['is_main'] else '非主户' )] | join(' | ')] -%}
             {% endfor %}
             {{ ns.options }}
@@ -39,15 +39,14 @@ automation sgcc:
     action:
       - service: homeassistant.update_entity
         target:
-          entity_id: sensor.sgcc_latest_balance_api
+          entity_id: sensor.sgcc_resident_latest_balance
 
 rest_command:
-  get_resident:
-    url: 'http://sgcc-alert:8000/get-resident'
-    method: 'POST'
+  get_residents:
+    url: 'http://sgcc-alert:8000/api/v1.0/residents'
+    method: 'GET'
     headers:
       Content-Type: 'application/json'
-    payload: '{"order_by": [{"item": "resident_id", "order": "desc"}]}'
 
 input_select:
   sgcc_resident:
@@ -57,8 +56,17 @@ input_select:
 
 sensor:
   - platform: rest
-    name: SGCC Latest Balance API
-    resource: "http://sgcc-alert:8000/get-latest-balance"
+    name: SGCC Resident Latest Balance
+    unique_id: sgcc_resident_latest_balance
+    resource_template: >
+      {%- set select_option = states('input_select.sgcc_resident') -%}
+      {%- set items = select_option.split(' | ') -%}
+      {%- set ns = namespace(resident_id='') -%}
+      {%- if items | length == 3 -%}
+          {%- set _, resident_id, _ = items -%}
+          {%- set ns.resident_id = resident_id -%}
+      {% endif %}
+      http://sgcc-alert:8000/api/v1.0/residents/{{ ns.resident_id }}/balances?order_by=date&order=desc&limit=1
     method: GET
     params:
       resident_id: >
@@ -74,7 +82,7 @@ sensor:
       {%- set select_option = states('input_select.sgcc_resident') -%}
       {%- set items = select_option.split(' | ') -%}
       {%- if items | length != 3 -%}
-          {{ {} }}
+          {{ 0 }}
       {% else %}
           {{ value_json.data[0].balance }}
       {% endif %}
