@@ -66,23 +66,17 @@ sensor:
           {%- set _, resident_id, _ = items -%}
           {%- set ns.resident_id = resident_id -%}
       {% endif %}
-      http://sgcc-alert:8000/api/v1.0/residents/{{ ns.resident_id }}/balances?order_by=date&order=desc&limit=1
+      http://sgcc-alert:8000/api/v1.0/residents/{{ ns.resident_id }}/balances
     method: GET
     params:
-      resident_id: >
-        {%- set select_option = states('input_select.sgcc_resident') -%}
-        {%- set items = select_option.split(' | ') -%}
-        {%- if items | length != 3 -%}
-            {{ '' }}
-        {% else %}
-            {%- set _, resident_id, _ = items -%}
-            {{ resident_id }}
-        {% endif %}
+      order_by: date
+      order: desc
+      limit: 1
     value_template: >
       {%- set select_option = states('input_select.sgcc_resident') -%}
       {%- set items = select_option.split(' | ') -%}
       {%- if items | length != 3 -%}
-          {{ 0 }}
+          {{ '0' }}
       {% else %}
           {{ value_json.data[0].balance }}
       {% endif %}
@@ -90,7 +84,9 @@ sensor:
     json_attributes:
       - resident_id
       - date
+      - granularity
       - balance
+      - est_remain_days
     scan_interval: 3600
     device_class: monetary
     state_class: total
