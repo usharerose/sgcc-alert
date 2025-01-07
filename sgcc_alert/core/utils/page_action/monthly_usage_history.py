@@ -178,14 +178,16 @@ def _get_single_resident_monthly_usage_history(
             date_range_td.query_selector_all('> div > span > span')
         )
         start_date_string = start_date_string[: -1]  # remove dash suffix
-        start_datetime = datetime.datetime.strptime(start_date_string, DATE_FORMAT)
-        if start_datetime.day != 1:
+        start_date = datetime.datetime.strptime(
+            start_date_string,
+            DATE_FORMAT
+        ).date()
+        if start_date.day != 1:
             logger.warning((
                 f'The monthly usage history data is monthly-partial '
                 f'which would be skipped: {start_date_string} ~ {end_date_string}'
             ))
             continue
-        ordinal_date = start_datetime.toordinal()
 
         elec_usage_span = usage_td.query_selector('div > span')
         elec_usage = None
@@ -199,7 +201,7 @@ def _get_single_resident_monthly_usage_history(
 
         record: Usage = {
             'resident_id': resident_id,
-            'date': ordinal_date,
+            'date': start_date,
             'granularity': DateGranularity.MONTHLY.value,
             'elec_usage': elec_usage,
             'elec_charge': elec_charge

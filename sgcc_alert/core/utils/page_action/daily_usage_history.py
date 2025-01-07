@@ -149,7 +149,7 @@ def _get_single_resident_daily_usage_history(
         date_cell_div = date_td.query_selector('div')
         assert date_cell_div is not None
         date_string = date_cell_div.inner_text().strip()
-        ordinal_date = datetime.datetime.strptime(date_string, DATE_FORMAT).toordinal()
+        date = datetime.datetime.strptime(date_string, DATE_FORMAT).date()
 
         elec_usage_div = usage_td.query_selector('div')
         elec_usage = None
@@ -158,7 +158,7 @@ def _get_single_resident_daily_usage_history(
 
         record: Usage = {
             'resident_id': resident_id,
-            'date': ordinal_date,
+            'date': date,
             'granularity': DateGranularity.DAILY.value,
             'elec_usage': elec_usage,
             'elec_charge': None  # There is no charge data in daily history

@@ -115,10 +115,10 @@ def _get_single_resident_balance(
 
     _, date_span_dom = date_div_dom.query_selector_all('> span')
     datetime_string = date_span_dom.inner_text().strip()
-    ordinal_date = datetime.datetime.strptime(
+    date = datetime.datetime.strptime(
         datetime_string,
         DATETIME_FORMAT
-    ).toordinal()
+    ).date()
 
     balance_div_dom, est_remain_days_div_dom = balance_div_dom.query_selector_all('> div')
 
@@ -130,7 +130,7 @@ def _get_single_resident_balance(
 
     record: Balance = {
         'resident_id': resident_id,
-        'date': ordinal_date,
+        'date': date,
         'granularity': DateGranularity.DAILY.value,
         'balance': balance,
         'est_remain_days': est_remain_days

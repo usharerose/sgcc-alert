@@ -220,9 +220,9 @@ class QueryService:
             FactBalance.granularity == DateGranularity.DAILY.value
         )
         if start_date is not None:
-            query = query.filter(FactBalance.date >= start_date.toordinal())
+            query = query.filter(FactBalance.date >= start_date)
         if end_date is not None:
-            query = query.filter(FactBalance.date <= end_date.toordinal())
+            query = query.filter(FactBalance.date <= end_date)
 
         order_func = get_order_func(order)
         query = query.order_by(order_func(getattr(FactBalance, order_by)))
@@ -293,9 +293,9 @@ class QueryService:
             FactUsage.granularity == granularity
         )
         if start_date is not None:
-            query = query.filter(FactUsage.date >= start_date.toordinal())
+            query = query.filter(FactUsage.date >= start_date)
         if end_date is not None:
-            query = query.filter(FactUsage.date <= end_date.toordinal())
+            query = query.filter(FactUsage.date <= end_date)
 
         order_func = get_order_func(order)
         query = query.order_by(order_func(getattr(FactUsage, order_by)))

@@ -1,7 +1,9 @@
 """
 Database schemes used by SQLAlchemy, which store data
 """
-from sqlalchemy import Boolean, Float, Integer, String
+import datetime
+
+from sqlalchemy import Boolean, Date, Float, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -56,8 +58,8 @@ class FactBalance(BaseModel):
         doc='Identifier of resident',
         comment='Identifier of resident'
     )
-    date: Mapped[int] = mapped_column(
-        Integer, primary_key=True,
+    date: Mapped[datetime.date] = mapped_column(
+        Date, primary_key=True,
         doc='Ordinal date',
         comment='Ordinal date'
     )
@@ -87,8 +89,8 @@ class FactUsage(BaseModel):
         doc='Identifier of resident',
         comment='Identifier of resident'
     )
-    date: Mapped[int] = mapped_column(
-        Integer, primary_key=True,
+    date: Mapped[datetime.date] = mapped_column(
+        Date, primary_key=True,
         doc='Ordinal date',
         comment='Ordinal date'
     )
