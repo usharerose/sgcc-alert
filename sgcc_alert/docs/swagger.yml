@@ -12,7 +12,7 @@ paths:
   /residents:
     get:
       summary: Get available residents
-      operationId: sgcc_alert.routes.get_residents
+      operationId: sgcc_alert.controllers.get_residents
       parameters:
         - name: order_by
           in: query
@@ -35,7 +35,7 @@ paths:
   /residents/{resident_id}/balances:
     get:
       summary: Get balance history of specific resident with daily granularity
-      operationId: sgcc_alert.routes.get_resident_balances
+      operationId: sgcc_alert.controllers.get_resident_balances
       parameters:
         - $ref: '#/components/parameters/ResidentId'
         - $ref: '#/components/parameters/StartDate'
@@ -60,7 +60,7 @@ paths:
   /residents/{resident_id}/usages:
     get:
       summary: Get usage history of specific resident
-      operationId: sgcc_alert.routes.get_resident_usages
+      operationId: sgcc_alert.controllers.get_resident_usages
       parameters:
         - $ref: '#/components/parameters/ResidentId'
         - $ref: '#/components/parameters/Granularity'

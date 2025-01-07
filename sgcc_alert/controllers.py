@@ -1,5 +1,5 @@
 """
-Routes of API
+Controllers related to request handling
 """
 import datetime
 from typing import Dict
