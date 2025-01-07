@@ -1,27 +1,25 @@
 """
-Routes of API
+Controllers related to request handling
 """
 import datetime
 from typing import Dict
 
-from flask import Blueprint, request
+from flask import request
 
 from .core.services.query_service import QueryService
 
 
-API_V1 = Blueprint('api_v1', __name__)
-
-
-@API_V1.route('/residents', methods=['GET'])
 def get_residents() -> Dict:
     order_by = request.args.get('order_by')
     order = request.args.get('order')
-    offset = request.args.get('offset')
-    if offset is not None:
-        offset = int(offset)
-    limit = request.args.get('limit')
-    if limit is not None:
-        limit = int(limit)
+    offset_arg = request.args.get('offset')
+    offset = None
+    if offset_arg is not None:
+        offset = int(offset_arg)
+    limit_arg = request.args.get('limit')
+    limit = None
+    if limit_arg is not None:
+        limit = int(limit_arg)
 
     result = QueryService.query_residents(
         order_by,
@@ -45,22 +43,31 @@ def get_residents() -> Dict:
     }
 
 
-@API_V1.route('/residents/<int:resident_id>/balances', methods=['GET'])
 def get_resident_balances(resident_id: int) -> Dict:
-    start_date = request.args.get('start_date')
-    if start_date is not None:
-        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_date = request.args.get('end_date')
-    if end_date is not None:
-        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    start_date_arg = request.args.get('start_date')
+    start_date = None
+    if start_date_arg is not None:
+        start_date = datetime.datetime.strptime(
+            start_date_arg,
+            '%Y-%m-%d'
+        ).date()
+    end_date_arg = request.args.get('end_date')
+    end_date = None
+    if end_date_arg is not None:
+        end_date = datetime.datetime.strptime(
+            end_date_arg,
+            '%Y-%m-%d'
+        ).date()
     order_by = request.args.get('order_by')
     order = request.args.get('order')
-    offset = request.args.get('offset')
-    if offset is not None:
-        offset = int(offset)
-    limit = request.args.get('limit')
-    if limit is not None:
-        limit = int(limit)
+    offset_arg = request.args.get('offset')
+    offset = None
+    if offset_arg is not None:
+        offset = int(offset_arg)
+    limit_arg = request.args.get('limit')
+    limit = None
+    if limit_arg is not None:
+        limit = int(limit_arg)
 
     result = QueryService.query_resident_balances(
         resident_id,
@@ -87,25 +94,34 @@ def get_resident_balances(resident_id: int) -> Dict:
     }
 
 
-@API_V1.route('/residents/<int:resident_id>/usages', methods=['GET'])
 def get_resident_usages(resident_id: int) -> Dict:
-    start_date = request.args.get('start_date')
     granularity = request.args.get('granularity', 'monthly')
 
-    if start_date is not None:
-        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-    end_date = request.args.get('end_date')
-    if end_date is not None:
-        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+    start_date_arg = request.args.get('start_date')
+    start_date = None
+    if start_date_arg is not None:
+        start_date = datetime.datetime.strptime(
+            start_date_arg,
+            '%Y-%m-%d'
+        ).date()
+    end_date_arg = request.args.get('end_date')
+    end_date = None
+    if end_date_arg is not None:
+        end_date = datetime.datetime.strptime(
+            end_date_arg,
+            '%Y-%m-%d'
+        ).date()
 
     order_by = request.args.get('order_by')
     order = request.args.get('order')
-    offset = request.args.get('offset')
-    if offset is not None:
-        offset = int(offset)
-    limit = request.args.get('limit')
-    if limit is not None:
-        limit = int(limit)
+    offset_arg = request.args.get('offset')
+    offset = None
+    if offset_arg is not None:
+        offset = int(offset_arg)
+    limit_arg = request.args.get('limit')
+    limit = None
+    if limit_arg is not None:
+        limit = int(limit_arg)
 
     result = QueryService.query_resident_usages(
         resident_id,
