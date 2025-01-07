@@ -2,7 +2,7 @@
 Query service
 """
 import datetime
-from typing import cast, Dict, List, Optional, TypedDict
+from typing import cast, Dict, List, Optional
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query, scoped_session
@@ -10,32 +10,7 @@ from sqlalchemy.orm import Query, scoped_session
 from ...constants import DateGranularity
 from ...databases.models import DimResident, FactBalance, FactUsage
 from ...databases.session import managed_session
-
-
-class Resident(TypedDict):
-
-    resident_id: int
-    is_main: bool
-    resident_address: str
-    developer_name: str
-
-
-class ResidentBalance(TypedDict):
-
-    resident_id: int
-    date: int
-    granularity: str
-    balance: float
-    est_remain_days: float
-
-
-class ResidentUsage(TypedDict):
-
-    resident_id: int
-    date: int
-    granularity: str
-    elec_usage: float
-    elec_charge: float
+from ...schemes import Balance, Resident, Usage
 
 
 class QueryService:
@@ -178,7 +153,7 @@ class QueryService:
         order: Optional[str] = 'asc',
         offset: Optional[int] = None,
         limit: Optional[int] = None
-    ) -> List[ResidentBalance]:
+    ) -> List[Balance]:
         with managed_session() as session:
             result = cls._query_resident_balances(
                 session,
@@ -203,7 +178,7 @@ class QueryService:
         order: Optional[str] = 'asc',
         offset: Optional[int] = None,
         limit: Optional[int] = None
-    ) -> List[ResidentBalance]:
+    ) -> List[Balance]:
         if order_by is None:
             order_by = 'date'
         if order is None:
@@ -220,9 +195,9 @@ class QueryService:
             FactBalance.granularity == DateGranularity.DAILY.value
         )
         if start_date is not None:
-            query = query.filter(FactBalance.date >= start_date.toordinal())
+            query = query.filter(FactBalance.date >= start_date)
         if end_date is not None:
-            query = query.filter(FactBalance.date <= end_date.toordinal())
+            query = query.filter(FactBalance.date <= end_date)
 
         order_func = get_order_func(order)
         query = query.order_by(order_func(getattr(FactBalance, order_by)))
@@ -233,7 +208,7 @@ class QueryService:
             query = query.limit(limit)
         columns = [column['name'] for column in query.column_descriptions]
         result = cast(
-            List[ResidentBalance],
+            List[Balance],
             [dict(zip(columns, item)) for item in query.all()]
         )
         return result
@@ -249,7 +224,7 @@ class QueryService:
         order: Optional[str] = 'asc',
         offset: Optional[int] = None,
         limit: Optional[int] = None
-    ) -> List[ResidentUsage]:
+    ) -> List[Usage]:
         with managed_session() as session:
             result = cls._query_resident_usages(
                 session,
@@ -276,7 +251,7 @@ class QueryService:
         order: Optional[str] = 'asc',
         offset: Optional[int] = None,
         limit: Optional[int] = None
-    ) -> List[ResidentUsage]:
+    ) -> List[Usage]:
         if order_by is None:
             order_by = 'date'
         if order is None:
@@ -293,9 +268,9 @@ class QueryService:
             FactUsage.granularity == granularity
         )
         if start_date is not None:
-            query = query.filter(FactUsage.date >= start_date.toordinal())
+            query = query.filter(FactUsage.date >= start_date)
         if end_date is not None:
-            query = query.filter(FactUsage.date <= end_date.toordinal())
+            query = query.filter(FactUsage.date <= end_date)
 
         order_func = get_order_func(order)
         query = query.order_by(order_func(getattr(FactUsage, order_by)))
@@ -306,7 +281,7 @@ class QueryService:
             query = query.limit(limit)
         columns = [column['name'] for column in query.column_descriptions]
         result = cast(
-            List[ResidentUsage],
+            List[Usage],
             [dict(zip(columns, item)) for item in query.all()]
         )
         return result
