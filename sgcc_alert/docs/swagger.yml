@@ -1,0 +1,281 @@
+openapi: "3.0.0"
+
+info:
+  title: SGCC Data API
+  version: "1.0"
+  description: Provide State Grid Corporation of China's dimension and fact data
+
+servers:
+  - url: /api/v1.0
+
+paths:
+  /residents:
+    get:
+      summary: Get available residents
+      operationId: sgcc_alert.routes.get_residents
+      parameters:
+        - name: order_by
+          in: query
+          required: false
+          description: Key which to order the result
+          schema:
+            type: string
+            enum:
+              - resident_id
+              - resident_address
+            default: resident_id
+            example: resident_id
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetResidentsResponse'
+
+  /residents/{resident_id}/balances:
+    get:
+      summary: Get balance history of specific resident with daily granularity
+      operationId: sgcc_alert.routes.get_resident_balances
+      parameters:
+        - $ref: '#/components/parameters/ResidentId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: order_by
+          in: query
+          required: false
+          description: Key which to order the result
+          schema:
+            type: string
+            enum:
+              - date
+            default: date
+            example: date
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetResidentBalancesResponse'
+
+  /residents/{resident_id}/usages:
+    get:
+      summary: Get usage history of specific resident
+      operationId: sgcc_alert.routes.get_resident_usages
+      parameters:
+        - $ref: '#/components/parameters/ResidentId'
+        - $ref: '#/components/parameters/Granularity'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: order_by
+          in: query
+          required: false
+          description: Key which to order the result
+          schema:
+            type: string
+            enum:
+              - date
+            default: date
+            example: date
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetResidentBalancesResponse'
+
+components:
+  parameters:
+    ResidentId:
+      name: resident_id
+      in: path
+      required: true
+      description: Identifier of the resident
+      schema:
+        type: integer
+        example: 1000000000001
+
+    Granularity:
+      name: granularity
+      in: query
+      required: true
+      description: Date range granularity
+      schema:
+        type: string
+        enum:
+          - daily
+          - monthly
+        example: daily
+
+    StartDate:
+      name: start_date
+      in: query
+      required: false
+      description: Start date as filter
+      schema:
+        type: string
+        format: date
+        example: 2025-01-01
+
+    EndDate:
+      name: end_date
+      in: query
+      required: false
+      description: End date as filter
+      schema:
+        type: string
+        format: date
+        example: 2025-01-01
+
+    Order:
+      name: order
+      in: query
+      required: false
+      description: Order
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        default: asc
+        example: asc
+
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Offset of the result
+      schema:
+        type: integer
+        default: 0
+        example: 0
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Count limitation on the result
+      schema:
+        type: integer
+        example: 5
+
+  schemas:
+    ResidentItem:
+      type: object
+      properties:
+        resident_id:
+          type: integer
+          description: The unique ID of the resident
+          example: 1000000000001
+        is_main:
+          type: boolean
+          description: Whether this resident is the main one
+          example: true
+        resident_address:
+          type: string
+          description: The address of the resident
+          example: 'Pingleyuan 100'
+        developer_name:
+          type: string
+          description: The name of the developer company
+          example: 'Local Developer'
+    BalanceItem:
+      type: object
+      properties:
+        resident_id:
+          type: integer
+          description: The unique ID of the resident
+          example: 1000000000001
+        granularity:
+          type: string
+          description: Date range granularity
+          example: 'daily'
+        date:
+          type: integer
+          description: Ordinal date
+          example: 738886
+        balance:
+          type: number
+          format: float
+          description: Balance of the resident
+          example: 10.0
+        est_remain_days:
+          type: number
+          format: float
+          description: Estimate remain days of the resident
+          example: 0.0
+    UsageItem:
+      type: object
+      properties:
+        resident_id:
+          type: integer
+          description: The unique ID of the resident
+          example: 1000000000001
+        granularity:
+          type: string
+          description: Date range granularity
+          example: 'daily'
+        date:
+          type: integer
+          description: Ordinal date
+          example: 738886
+        elec_usage:
+          type: number
+          format: float
+          description: Electricity usage of the resident
+          example: 10.0
+        elec_charge:
+          type: number
+          format: float
+          description: Electricity charge of the resident
+          example: 0.0
+    Pagination:
+      type: object
+      nullable: true
+      properties:
+        offset:
+          type: integer
+        limit:
+          type: integer
+        next_offset:
+          type: integer
+
+  responses:
+    GetResidentsResponse:
+      description: Response about available residents
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResidentItem'
+              pagination:
+                $ref: '#/components/schemas/Pagination'
+    GetResidentBalancesResponse:
+      description: Response about specific resident's balance history
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BalanceItem'
+              pagination:
+                $ref: '#/components/schemas/Pagination'
+    GetResidentUsagesResponse:
+      description: Response about specific resident's usage history
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UsageItem'
+              pagination:
+                $ref: '#/components/schemas/Pagination'
