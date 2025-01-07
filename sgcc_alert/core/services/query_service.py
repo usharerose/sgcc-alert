@@ -2,7 +2,7 @@
 Query service
 """
 import datetime
-from typing import Dict, List, Optional, TypedDict
+from typing import cast, Dict, List, Optional, TypedDict
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Query, scoped_session
@@ -162,7 +162,10 @@ class QueryService:
         if limit is not None:
             query = query.limit(limit)
         columns = [column['name'] for column in query.column_descriptions]
-        result = [dict(zip(columns, item)) for item in query.all()]
+        result = cast(
+            List[Resident],
+            [dict(zip(columns, item)) for item in query.all()]
+        )
         return result
 
     @classmethod
@@ -229,7 +232,10 @@ class QueryService:
         if limit is not None:
             query = query.limit(limit)
         columns = [column['name'] for column in query.column_descriptions]
-        result = [dict(zip(columns, item)) for item in query.all()]
+        result = cast(
+            List[ResidentBalance],
+            [dict(zip(columns, item)) for item in query.all()]
+        )
         return result
 
     @classmethod
@@ -299,7 +305,10 @@ class QueryService:
         if limit is not None:
             query = query.limit(limit)
         columns = [column['name'] for column in query.column_descriptions]
-        result = [dict(zip(columns, item)) for item in query.all()]
+        result = cast(
+            List[ResidentUsage],
+            [dict(zip(columns, item)) for item in query.all()]
+        )
         return result
 
 
