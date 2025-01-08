@@ -25,7 +25,8 @@ def create_app() -> Flask:
         }
     )
 
-    _app.add_api("swagger.yml", base_path='/api/v1.0')
+    _app.add_api('swagger_api.yml', base_path='/api/v1.0')
+    _app.add_api('swagger_page.yml', base_path='/')
 
     TracingMiddleware.install(_app.app)
     LoggingMiddleware.install(_app.app, 'sgcc-alert', settings.DEBUG)
