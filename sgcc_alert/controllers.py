@@ -4,9 +4,13 @@ Controllers related to request handling
 import datetime
 from typing import Dict
 
-from flask import request
+from flask import render_template, request
 
 from .core.services.query_service import QueryService
+
+
+def dashboard() -> str:
+    return render_template('dashboard.html')
 
 
 def get_residents() -> Dict:

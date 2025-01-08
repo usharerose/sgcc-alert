@@ -1,0 +1,23 @@
+openapi: "3.0.0"
+
+info:
+  title: SGCC Dashboard Page
+  version: "1.0"
+  description: SGCC Personal Dashboard Page
+
+servers:
+  - url: /
+
+paths:
+  /dashboard:
+    get:
+      summary: "SGCC Dashboard"
+      operationId: sgcc_alert.controllers.dashboard
+      responses:
+        200:
+          description: "Dashboard Home Page"
+          content:
+            text/html:
+              schema:
+                type: string
+                example: "<html><body>...</body></html>"
