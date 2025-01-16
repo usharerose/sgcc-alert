@@ -1,0 +1,8 @@
+# SGCC_ACCOUNT_USERNAME = 'admin'
+# SGCC_ACCOUNT_PASSWORD = 'admin'
+
+
+# DAILY_CRON_TIME = '06:00'
+
+
+# SYNC_INITIALIZED = True
