@@ -2,6 +2,8 @@
 
 ![license](https://img.shields.io/github/license/usharerose/sgcc-alert)
 
+[English](README.md) · [简体中文](README.zh.md)
+
 Know your home power usage from `State Grid Corporation of China` (`SGCC`)
 
 ## Features
